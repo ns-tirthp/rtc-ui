@@ -1,0 +1,22 @@
+{
+    "name": "node",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "nodemon start",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^5.1.0",
+        "node-pre-gyp": "^0.17.0",
+        "wrtc": "^0.4.7",
+        "ws": "^8.18.2",
+        "nodemon": "^3.1.10"
+    }
+}
