@@ -3,7 +3,6 @@ const express = require("express");
 const http = require("http");
 const WebSocket = require("ws"); // For WebSocket signaling
 const path = require("path");
-const { spawn } = require("child_process");
 
 const app = express();
 const server = http.createServer(app);
@@ -153,7 +152,7 @@ wss.on("connection", function connection(ws) {
 
                 currentConfig = { intervalMs, packetSize, durationMs };
                 console.log(
-                    `Configuration received: Send every ${intervalMs}ms, packet size ${packetSize} bytes, for ${durationMs}ms.`,
+                    `Configuration received: Send ${intervalMs} packet/second, packet size ${packetSize} bytes, for ${durationMs} Seconds.`,
                 );
 
                 // Send confirmation back
@@ -188,7 +187,7 @@ wss.on("connection", function connection(ws) {
                             if (
                                 packetsSentCount >=
                                 currentConfig.durationMs *
-                                currentConfig.intervalMs
+                                    currentConfig.intervalMs
                             ) {
                                 const report = await peerConnection.getStats();
                                 report?.forEach((r) => {
@@ -306,7 +305,7 @@ wss.on("connection", function connection(ws) {
                 newPc.ondatachannel = (event) => {
                     const channel = event.channel;
                     setupDataSender(channel, newPc);
-                    setInterval(async () => { }, 1000);
+                    setInterval(async () => {}, 1000);
                 };
 
                 newPc.onconnectionstatechange = () => {

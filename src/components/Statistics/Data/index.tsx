@@ -1,6 +1,11 @@
 import { PacketReceptionHeatmap } from "@/components/HeatMap";
 import { useGlobalStore } from "@/context/GlobalStore";
-import { convertBytes, findMissingSequenceNumber } from "@/utils/helper";
+import { MayBe } from "@/hooks/types";
+import {
+    convertBytes,
+    currentFormattedDate,
+    findMissingSequenceNumber,
+} from "@/utils/helper";
 import {
     Activity,
     AlertTriangle,
@@ -25,6 +30,11 @@ import {
     RadialBarChart,
 } from "recharts";
 
+type DataChannelStats = {
+    time: string;
+    bytesReceived: number;
+    messagesReceived: number;
+};
 const TestSeverity = ({ totalDataInBytes }: { totalDataInBytes: number }) => {
     const KILOBYTE = 1024;
     const MEGABYTE = 1024 * KILOBYTE;
@@ -133,13 +143,11 @@ const PacketIssueList = ({
     );
 };
 export const VideoStreamStatistics = ({
-    data,
-    sequences,
+    statistics,
     packets,
     dataChannelStatus,
 }: {
-    data: { time: string; bytesReceived: number; packetsReceived: number }[];
-    sequences: number[];
+    statistics: MayBe<RTCStatsReport>;
     packets: {
         sendAt: bigint;
         receivedAt: bigint;
@@ -147,48 +155,55 @@ export const VideoStreamStatistics = ({
     }[];
     dataChannelStatus: "new" | "opened" | "inprogress" | "closed";
 }) => {
-    const [strippedData, setStrippedData] = useState<
-        {
-            time: string;
-            bytesReceived: number;
-            packetsReceived: number;
-        }[]
-    >([]);
-    const { frequency, duration, packetSize, acceptableDelay } =
-        useGlobalStore();
+    const {
+        frequency,
+        duration,
+        acceptableDelay,
+        expectedTotalByt,
+        expectedTotalMsg,
+    } = useGlobalStore();
+    const [data, setData] = useState<DataChannelStats[]>([]);
 
     useEffect(() => {
-        setStrippedData(data.slice(-20));
-    }, [data]);
+        if (!statistics) return;
+        statistics.forEach((report) => {
+            if (report.type === "data-channel") {
+                console.log(report);
+                setData((prev) => [
+                    ...prev,
+                    {
+                        time: currentFormattedDate(),
+                        messagesReceived: report.messagesReceived,
+                        bytesReceived: report.bytesReceived,
+                    },
+                ]);
+            }
+        });
+    }, [statistics]);
 
-    const totalPackets = useMemo(() => {
-        return frequency * duration;
-    }, [frequency, duration]);
-
-    const totalBytes = useMemo(() => {
-        return frequency * duration * packetSize;
-    }, [frequency, duration, packetSize]);
-
-    const getTotalBytesFormatted = useMemo(() => {
-        const { convertedValue, convertedUnit } = convertBytes(totalBytes);
+    const formattedTotalBytes = useMemo(() => {
+        const { convertedValue, convertedUnit } =
+            convertBytes(expectedTotalByt);
         return `${convertedValue} ${convertedUnit}`;
-    }, [totalBytes]);
+    }, [expectedTotalByt]);
 
-    const packetLoss = useMemo(() => {
+    const calculatedPacketLoss = useMemo(() => {
         if (dataChannelStatus !== "closed") return 0;
-        const received = strippedData.at(-1)?.packetsReceived ?? 0;
-        return ((totalPackets + 2 - received) * 100) / (totalPackets + 2);
-    }, [totalPackets, strippedData, dataChannelStatus]);
+        const received = data.at(-1)?.messagesReceived ?? 0;
+        return (
+            ((expectedTotalMsg + 2 - received) * 100) / (expectedTotalMsg + 2)
+        );
+    }, [expectedTotalMsg, data, dataChannelStatus]);
 
-    const missingSequenceNumber = useMemo(() => {
+    const missingPacketNumbers = useMemo(() => {
         if (dataChannelStatus !== "closed") return [];
         return findMissingSequenceNumber(
-            totalPackets,
+            expectedTotalMsg,
             packets.map((data) => data.sequenceNumber),
         );
-    }, [totalPackets, packets, dataChannelStatus]);
+    }, [expectedTotalMsg, packets, dataChannelStatus]);
 
-    const latePackets = useMemo(() => {
+    const delayedPackets = useMemo(() => {
         return packets
             .filter((data) => data.receivedAt - data.sendAt > acceptableDelay)
             .map((data) => data.sequenceNumber);
@@ -203,23 +218,25 @@ export const VideoStreamStatistics = ({
                         <h3 className="text-xl font-bold">Data Summary</h3>
                     </div>
                     <p className="text-justify">
-                        Server will send total {totalPackets} packets at rate of{" "}
-                        {frequency} packets per second in span of total{" "}
+                        Server will send total {expectedTotalMsg} packets at
+                        rate of {frequency} packets per second in span of total{" "}
                         {duration} seconds
                     </p>
                     <div className="flex flex-col gap-2">
                         <p className="font-semibold text-lg">Test Type</p>
-                        <TestSeverity totalDataInBytes={totalBytes} />
+                        <TestSeverity totalDataInBytes={expectedTotalByt} />
                     </div>
                     <div className="flex gap-4">
                         <div className="text-lg mb-2">
                             <p className="font-semibold">Total Packets</p>
-                            <p className="text-2xl font-bold">{totalPackets}</p>
+                            <p className="text-2xl font-bold">
+                                {expectedTotalMsg}
+                            </p>
                         </div>
                         <div className="text-lg">
                             <p className="font-semibold">Total Bytes</p>
                             <p className="text-2xl font-bold">
-                                {getTotalBytesFormatted}
+                                {formattedTotalBytes}
                             </p>
                         </div>
                     </div>
@@ -244,7 +261,7 @@ export const VideoStreamStatistics = ({
                                 barSize={20} // Thickness of the bar
                                 data={[
                                     {
-                                        received: packetLoss,
+                                        received: calculatedPacketLoss,
                                         fill: "#ef4444",
                                     },
                                 ]}
@@ -268,7 +285,7 @@ export const VideoStreamStatistics = ({
                                     className="text-4xl font-bold"
                                     fill="#ef4444" // Red color for the text
                                 >
-                                    {packetLoss.toFixed(1)}%
+                                    {calculatedPacketLoss.toFixed(1)}%
                                 </text>
                             </RadialBarChart>
                         </ResponsiveContainer>
@@ -287,7 +304,7 @@ export const VideoStreamStatistics = ({
                     <div className="w-full h-48">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart
-                                data={strippedData}
+                                data={data.slice(-20)}
                                 margin={{
                                     top: 5,
                                     right: 10,
@@ -315,7 +332,7 @@ export const VideoStreamStatistics = ({
                                 />
                                 <Line
                                     type="monotone"
-                                    dataKey="packetsReceived"
+                                    dataKey="messagesReceived"
                                     stroke="#8884d8" // A distinct color for the line
                                     activeDot={{ r: 8 }}
                                     name="Packets Received"
@@ -337,7 +354,7 @@ export const VideoStreamStatistics = ({
                     <div className="w-full h-48">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart
-                                data={strippedData}
+                                data={data.slice(-20)}
                                 margin={{
                                     top: 5,
                                     right: 10,
@@ -378,20 +395,22 @@ export const VideoStreamStatistics = ({
                     </p>
                 </div>
                 <PacketReceptionHeatmap
-                    receivedSequenceNumbers={sequences}
-                    totalCells={totalPackets}
+                    receivedSequenceNumbers={packets.map(
+                        (d) => d.sequenceNumber,
+                    )}
+                    totalCells={expectedTotalMsg}
                 ></PacketReceptionHeatmap>
                 <div className="flex flex-col gap-4">
                     <PacketIssueList
                         title="Lost Packets"
                         Icon={WifiOff}
-                        packets={missingSequenceNumber}
+                        packets={missingPacketNumbers}
                         typeColorClass="text-red-500"
                     />
                     <PacketIssueList
                         title="Late Packets"
                         Icon={History} // Using History icon for late packets
-                        packets={latePackets}
+                        packets={delayedPackets}
                         typeColorClass="text-yellow-500"
                     />
                 </div>

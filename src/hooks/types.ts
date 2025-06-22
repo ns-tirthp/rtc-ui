@@ -14,3 +14,13 @@ export type Message =
     | RTCSessionDescriptionInit
     | RTCIceCandidateExchange
     | PeerIdExchange;
+
+export interface RTCMediaStatistics extends Partial<RTCInboundRtpStreamStats> {
+    time: string;
+}
+
+export interface DataChannelStatistics {
+    time: string;
+    bytesReceived: number;
+    messagesReceived: number;
+}

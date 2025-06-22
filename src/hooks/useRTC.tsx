@@ -2,102 +2,140 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MayBe, Message } from "./types";
 import { useGlobalStore } from "@/context/GlobalStore";
 
+type TestMode = "DataChannel" | "VideoStream";
+type TestProgressState = "new" | "opened" | "inprogress" | "closed";
+type PeerConnectionState = RTCPeerConnectionState;
+type DataChannelBufferMessage = {
+    sendAt: bigint;
+    receivedAt: bigint;
+    sequenceNumber: number;
+};
+
 export default function useRTC() {
+    const signalingServerUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { frequency, packetSize, duration } = useGlobalStore();
 
     const pcRef = useRef<MayBe<RTCPeerConnection>>(null); // Peer Connection Ref
     const dcRef = useRef<MayBe<RTCDataChannel>>(null); // Data Channel Ref
     const wsRef = useRef<MayBe<WebSocket>>(null); // WebSocket Connection Ref
-    const icRef = useRef<MayBe<RTCIceCandidate[]>>([]);
+    const icRef = useRef<MayBe<RTCIceCandidate[]>>([]); // LocalIce candidates Ref
     const vuRef = useRef<MayBe<MediaStream>>(null);
     const siRef = useRef<MayBe<NodeJS.Timeout>>(null);
+    const cvRef = useRef<MayBe<HTMLCanvasElement>>(null);
+    const ctRef = useRef<MayBe<CanvasRenderingContext2D>>(null);
 
-    const [peerId, setPeerId] = useState<MayBe<string>>(null);
-
-    const signalingServerUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    const [connectionState, setConnectionState] =
-        useState<RTCPeerConnectionState>("new");
-
-    const messagesRef = useRef<
-        MayBe<({ receivedAt: bigint; data: ArrayBuffer } | string)[]>
-    >([]);
-    const [sequenceReceived, setSequenceReceived] = useState<number[]>([]);
-    const [packets, setPackets] = useState<
-        {
-            sendAt: bigint;
-            receivedAt: bigint;
-            sequenceNumber: number;
-        }[]
-    >([]);
-    const [mediaStreamStats, setMediaStreamStats] = useState<
-        { time: string; loss: number }[]
-    >([]);
-
-    const [dataChannelStats, setDataChannelStats] = useState<
-        {
-            time: string;
-            bytesReceived: number;
-            packetsReceived: number;
-        }[]
-    >([{ bytesReceived: 0, packetsReceived: 0, time: "" }]);
-
-    const [testMode, setTestMode] = useState<"DataChannel" | "VideoStream">(
-        "DataChannel",
-    );
-    const [dataChannelStatus, setDataChannelStatus] = useState<
-        "new" | "opened" | "inprogress" | "closed"
-    >("new");
-    const [haltReporting, setHaltReporting] = useState<boolean>(false);
+    /**
+     * Cleans up all active WebRTC connections and resets state.
+     */
     const tearDown = () => {
         pcRef.current?.close();
         dcRef.current?.close();
         vuRef.current?.getTracks().forEach((track) => track.stop());
-        setConnectionState("new");
+        setPeerState("new");
 
         pcRef.current = null;
         dcRef.current = null;
     };
 
+    const [statistics, setStatistics] = useState<MayBe<RTCStatsReport>>(null);
+    /**
+     * Periodically dumps RTC statistics.
+     */
+    const dumpStats = async () => {
+        siRef.current = setInterval(async () => {
+            const report = await pcRef.current?.getStats();
+            if (report) setStatistics(report);
+        }, 1000);
+    };
+
+    const [stopDumpingStats, setStopDumpingStats] = useState<boolean>(false);
+    /**
+     * Effect to handle stopping stats dumping and data channel status change.
+     */
     useEffect(() => {
-        if (haltReporting) {
+        if (stopDumpingStats) {
             // Wait two seconds to wait for packets that are in transit
             let timeoutId: NodeJS.Timeout | null = null;
             timeoutId = setTimeout(() => {
-                setDataChannelStatus("closed");
+                setTestState("closed");
                 if (siRef.current) clearInterval(siRef.current);
                 if (timeoutId) clearTimeout(timeoutId);
             }, 2000);
         }
-    }, [haltReporting]);
+    }, [stopDumpingStats]);
 
+    /**
+     * Generates a random video frame on the canvas.
+     */
+    const generateRandomVideoFrame = useCallback(() => {
+        if (!ctRef.current) {
+            console.error("Error while generating random frame");
+            return;
+        }
+        const imageData = ctRef.current.createImageData(640, 480);
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            imageData.data[i + 0] = Math.random() * 255; // R
+            imageData.data[i + 1] = Math.random() * 255; // G
+            imageData.data[i + 2] = Math.random() * 255; // B
+            imageData.data[i + 3] = 255; // A
+        }
+        ctRef.current.putImageData(imageData, 0, 0);
+        requestAnimationFrame(generateRandomVideoFrame);
+    }, []);
+
+    /**
+     * Streams dummy video from a canvas.
+     * @param {number} streamDuration - Duration to stream video in milliseconds.
+     */
+    const streamDummyVideo = useCallback(
+        (streamDuration: number) => {
+            const container = document.getElementById("#videoSource");
+            if (!container) {
+                console.error("Video source container not found.");
+                return;
+            }
+
+            const canvas = document.createElement("canvas");
+            cvRef.current = canvas;
+            container.appendChild(canvas);
+            ctRef.current = canvas.getContext("2d");
+
+            generateRandomVideoFrame(); // Start generating frames
+
+            const stream = canvas.captureStream(30); // 30 FPS
+            vuRef.current = stream; // Store for cleanup
+
+            stream
+                .getTracks()
+                .forEach((track) => pcRef.current?.addTrack(track, stream));
+
+            dumpStats();
+
+            // Stop streaming after duration
+            setTimeout(() => {
+                tearDown();
+            }, streamDuration);
+        },
+        [generateRandomVideoFrame],
+    );
+
+    const [testMode, setTestMode] = useState<TestMode>("DataChannel");
     useEffect(() => {
         // TestMode Changed We need renegotiate with server
         tearDown();
     }, [testMode]);
-
-    const streamVideo = useCallback(async () => {
-        vuRef.current = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true,
-        });
-        if (vuRef.current) {
-            vuRef.current
-                .getTracks()
-                .forEach((track) =>
-                    pcRef.current?.addTrack(
-                        track,
-                        vuRef.current as MediaStream,
-                    ),
-                );
-            packetLossReport();
-        }
-    }, []);
 
     const getConfiguration = useMemo(() => {
         const cnf: number[] = [frequency, packetSize, duration];
         return cnf.map((data) => data.toString());
     }, [frequency, packetSize, duration]);
 
+    const [peerState, setPeerState] = useState<PeerConnectionState>("new");
+    const [testState, setTestState] = useState<TestProgressState>("new");
+    const [packets, setPackets] = useState<DataChannelBufferMessage[]>([]);
+    /**
+     * Attaches event listeners to RTCPeerConnection and RTCDataChannel.
+     */
     const attachListeners = useCallback(() => {
         if (!pcRef.current) return;
 
@@ -117,13 +155,12 @@ export default function useRTC() {
 
         pcRef.current.onconnectionstatechange = async () => {
             if (!pcRef.current) return;
-            setConnectionState(pcRef.current.connectionState);
+            setPeerState(pcRef.current.connectionState);
         };
 
         if (!dcRef.current) return;
 
         dcRef.current.onopen = () => {
-            dataChannelReport();
             dcRef.current?.send(`SEND ${getConfiguration.join(" ")}`);
         };
 
@@ -132,40 +169,24 @@ export default function useRTC() {
             if (typeof data === "string") {
                 if (data === "send ready") {
                     dcRef.current?.send("send start");
-                    setDataChannelStatus("inprogress");
                 }
                 if (data.startsWith("SEND DONE")) {
-                    messagesRef.current?.forEach(
-                        (
-                            message:
-                                | { receivedAt: bigint; data: ArrayBuffer }
-                                | string,
-                        ) => {
-                            if (message instanceof Object) {
-                                const view = new DataView(message.data);
-                                const sequenceNumber = view.getUint16(0, false);
-                                const timestamp = view.getBigInt64(2, false);
-                                setPackets((prev) => [
-                                    ...prev,
-                                    {
-                                        sendAt: timestamp,
-                                        receivedAt: message.receivedAt,
-                                        sequenceNumber,
-                                    },
-                                ]);
-                            }
-                        },
-                    );
-                    setHaltReporting(true);
+                    console.debug(data);
+                    setStopDumpingStats(true);
+                    setTestState("closed");
+                    dcRef.current?.close();
                 }
             } else {
-                messagesRef.current?.push({
-                    receivedAt: BigInt(Date.now()),
-                    data,
-                });
-                setSequenceReceived((prev: number[]) => [
+                const bv = new DataView(data);
+                const sn = bv.getUint16(0, false);
+                const ts = bv.getBigInt64(2, false);
+                setPackets((prev) => [
                     ...prev,
-                    new DataView(data).getUint16(0, false),
+                    {
+                        sendAt: ts,
+                        receivedAt: BigInt(Date.now()),
+                        sequenceNumber: sn,
+                    },
                 ]);
             }
         };
@@ -173,10 +194,14 @@ export default function useRTC() {
 
     const initiateTest = async () => {
         await initiateOffer();
+        setTestState("inprogress");
     };
 
-    const initiateOffer = useCallback(async () => {
-        pcRef.current = new RTCPeerConnection();
+    /**
+     * Selects and configures the preferred channel (DataChannel or VideoStream).
+     */
+    const selectChannel = useCallback(() => {
+        if (!pcRef.current) return;
         if (testMode === "DataChannel") {
             dcRef.current = pcRef.current.createDataChannel(
                 "data-stream-channel",
@@ -186,9 +211,18 @@ export default function useRTC() {
                 },
             );
         } else if (testMode === "VideoStream") {
-            await streamVideo();
+            streamDummyVideo(30000);
         }
+    }, [streamDummyVideo, testMode]);
+
+    /**
+     * Initiates the WebRTC offer process.
+     */
+    const initiateOffer = useCallback(async () => {
+        pcRef.current = new RTCPeerConnection();
+        selectChannel();
         attachListeners();
+        dumpStats();
         console.debug("Offer initiated to peer");
         const offer = await pcRef.current.createOffer();
         await pcRef.current.setLocalDescription(offer);
@@ -198,51 +232,12 @@ export default function useRTC() {
                 sdp: pcRef.current.localDescription,
             }),
         );
-    }, [attachListeners, streamVideo, testMode]);
+    }, [attachListeners, selectChannel]);
 
-    const packetLossReport = async () => {
-        siRef.current = setInterval(async () => {
-            const report = await pcRef.current?.getStats();
-            report?.forEach((r) => {
-                if (r.type === "remote-inbound-rtp" && r.kind === "video") {
-                    setMediaStreamStats((prev) => [
-                        ...prev,
-                        {
-                            time: new Date().toLocaleTimeString("en-US", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                            }),
-                            loss: r.packetsLost,
-                        },
-                    ]);
-                }
-            });
-        }, 1000);
-    };
-
-    const dataChannelReport = async () => {
-        siRef.current = setInterval(async () => {
-            const report = await pcRef.current?.getStats();
-            report?.forEach((r) => {
-                if (r.type === "data-channel") {
-                    setDataChannelStats((prev) => [
-                        ...prev,
-                        {
-                            time: new Date().toLocaleTimeString("en-US", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                            }),
-                            bytesReceived: r.bytesReceived,
-                            packetsReceived: r.messagesReceived,
-                        },
-                    ]);
-                }
-            });
-        }, 1000);
-    };
-
+    const [peerId, setPeerId] = useState<MayBe<string>>(null);
+    /**
+     * Main effect for WebSocket connection and handling signaling messages.
+     */
     useEffect(() => {
         if (wsRef.current) return;
         wsRef.current = new WebSocket(signalingServerUrl ?? "");
@@ -259,7 +254,6 @@ export default function useRTC() {
         wsRef.current.onmessage = async (message) => {
             const { data } = message;
             const parsed: Message = JSON.parse(data);
-            console.log(parsed);
             switch (parsed.type) {
                 case "peerId":
                     setPeerId(parsed.peerId);
@@ -295,15 +289,13 @@ export default function useRTC() {
     }, [attachListeners, peerId, initiateOffer, signalingServerUrl, testMode]);
 
     return {
-        connectionState,
+        connectionState: peerState,
         initiateTest,
         peerId,
-        packetLost: mediaStreamStats,
+        statistics,
         testMode,
         setTestMode,
-        dcStats: dataChannelStats,
-        sequenceReceived,
         packets,
-        dataChannelStatus,
+        dataChannelState: testState,
     };
 }

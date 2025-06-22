@@ -9,17 +9,14 @@ import { VideoStreamStatistics } from "@/components/Statistics/Data";
 
 export default function Home() {
     const {
-        connectionState,
-        initiateTest,
-        // messageCounter,
-        dcStats,
         peerId,
-        packetLost,
-        testMode: activeMode,
-        sequenceReceived,
-        setTestMode: setActiveMode,
         packets,
-        dataChannelStatus,
+        testMode,
+        statistics,
+        setTestMode,
+        initiateTest,
+        connectionState,
+        dataChannelState,
     } = useRTC();
 
     return (
@@ -28,23 +25,23 @@ export default function Home() {
                 <div className="bg-white rounded-full p-1 flex items-center justify-center mb-6 shadow-md">
                     <button
                         className={`px-6 py-3 rounded-full text-lg font-semibold flex items-center transition-all duration-300
-                                ${activeMode === "DataChannel" ? "bg-blue-600 text-white shadow-lg" : "text-gray-700 hover:bg-gray-200"}`}
-                        onClick={() => setActiveMode("DataChannel")}
+                                ${testMode === "DataChannel" ? "bg-blue-600 text-white shadow-lg" : "text-gray-700 hover:bg-gray-200"}`}
+                        onClick={() => setTestMode("DataChannel")}
                     >
                         <Wifi className="mr-2" size={20} />
                         DataChannel
                     </button>
                     <button
                         className={`px-6 py-3 rounded-full text-lg font-semibold flex items-center transition-all duration-300
-                                ${activeMode === "VideoStream" ? "bg-blue-600 text-white shadow-lg" : "text-gray-700 hover:bg-gray-200"}`}
-                        onClick={() => setActiveMode("VideoStream")}
+                                ${testMode === "VideoStream" ? "bg-blue-600 text-white shadow-lg" : "text-gray-700 hover:bg-gray-200"}`}
+                        onClick={() => setTestMode("VideoStream")}
                     >
                         <Film className="mr-2" size={20} />
                         Video/Audio Stream
                     </button>
                 </div>
             </div>
-            {activeMode === "DataChannel" ? (
+            {testMode === "DataChannel" ? (
                 <Configuration></Configuration>
             ) : null}
             <div className="fixed bottom-8 right-8 flex items-center space-x-3 w-min whitespace-nowrap">
@@ -53,14 +50,13 @@ export default function Home() {
             <div className="fixed top-2 right-2 flex items-center space-x-3 w-min whitespace-nowrap">
                 <p className="text-xs text-black">{peerId}</p>
             </div>
-            {activeMode === "VideoStream" ? (
-                <RTCNetworkStatics data={packetLost}></RTCNetworkStatics>
+            {testMode === "VideoStream" ? (
+                <RTCNetworkStatics statistics={statistics}></RTCNetworkStatics>
             ) : (
                 <VideoStreamStatistics
-                    data={dcStats}
-                    sequences={sequenceReceived}
+                    statistics={statistics}
                     packets={packets}
-                    dataChannelStatus={dataChannelStatus}
+                    dataChannelStatus={dataChannelState}
                 ></VideoStreamStatistics>
             )}
             <button

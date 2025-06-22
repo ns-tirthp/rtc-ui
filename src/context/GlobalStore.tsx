@@ -5,6 +5,7 @@ import React, {
     useState,
     ReactNode,
     useMemo,
+    useCallback,
 } from "react";
 
 // 1. Define the types for the global store state and the context value
@@ -29,6 +30,8 @@ interface GlobalStoreContextType {
     duration: number;
     frequency: number;
     acceptableDelay: number;
+    expectedTotalMsg: number;
+    expectedTotalByt: number;
 }
 
 // 2. Create the Context
@@ -45,12 +48,10 @@ const GlobalStoreContext = createContext<GlobalStoreContextType | null>(null);
  */
 export const GlobalStoreProvider = ({ children }: { children: ReactNode }) => {
     // The main state will be a single object storing all key-value pairs
-    const keys: ItemsKey[] = [
-        "packetSize",
-        "frequency",
-        "duration",
-        "acceptableDelay",
-    ];
+    const keys: ItemsKey[] = useMemo(
+        () => ["packetSize", "frequency", "duration", "acceptableDelay"],
+        [],
+    );
     const [packetSize, setPacketSize] = useState<number>(512);
     const [frequency, setFrequency] = useState<number>(10);
     const [duration, setDuration] = useState<number>(30);
@@ -58,12 +59,14 @@ export const GlobalStoreProvider = ({ children }: { children: ReactNode }) => {
 
     const setter: {
         [keys: string]: (arg0: number) => void;
-    } = {
-        [keys[0]]: setPacketSize,
-        [keys[1]]: setFrequency,
-        [keys[2]]: setDuration,
-        [keys[3]]: setAcceptableDelay,
-    };
+    } = useMemo(() => {
+        return {
+            [keys[0]]: setPacketSize,
+            [keys[1]]: setFrequency,
+            [keys[2]]: setDuration,
+            [keys[3]]: setAcceptableDelay,
+        };
+    }, [keys]);
 
     /**
      * Function to update a specific key in the store.
@@ -71,10 +74,20 @@ export const GlobalStoreProvider = ({ children }: { children: ReactNode }) => {
      * @param {string} key The key to update.
      * @param {*} value The new value for the key.
      */
-    function setItem(key: ItemsKey, value: number): void {
-        console.log(key, value);
-        setter[key](value);
-    }
+    const setItem = useCallback(
+        (key: ItemsKey, value: number) => {
+            setter[key](value);
+        },
+        [setter],
+    );
+
+    const expectedTotalMsg = useMemo(() => {
+        return frequency * duration;
+    }, [frequency, duration]);
+
+    const expectedTotalByt = useMemo(() => {
+        return frequency * duration * packetSize;
+    }, [frequency, duration, packetSize]);
 
     // The value provided to consumers will include the current store state
     // and the functions to modify it.
@@ -85,9 +98,18 @@ export const GlobalStoreProvider = ({ children }: { children: ReactNode }) => {
             frequency,
             acceptableDelay,
             setItem, // Function to set a specific key-value pair
+            expectedTotalMsg,
+            expectedTotalByt,
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [packetSize, duration, frequency, acceptableDelay]);
+    }, [
+        packetSize,
+        duration,
+        frequency,
+        acceptableDelay,
+        setItem,
+        expectedTotalMsg,
+        expectedTotalByt,
+    ]);
 
     return (
         <GlobalStoreContext.Provider value={contextValue}>
