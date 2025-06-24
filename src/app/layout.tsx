@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Rubik } from "next/font/google";
+import { Funnel_Display } from "next/font/google";
 import "./globals.css";
 import { GlobalStoreProvider } from "@/context/GlobalStore";
 
-const rubik = Rubik({
+const funnelDisplay = Funnel_Display({
     variable: "--font-geist-sans",
     subsets: ["latin"],
 });
@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body className={`${rubik.className}`}>
+            <body className={`${funnelDisplay.className}`}>
                 <GlobalStoreProvider>{children}</GlobalStoreProvider>
             </body>
         </html>

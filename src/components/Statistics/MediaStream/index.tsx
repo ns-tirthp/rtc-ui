@@ -15,7 +15,7 @@ import {
     RadialBarChart,
 } from "recharts";
 
-export const RTCNetworkStatics = ({
+export const MediaStreamStatistics = ({
     statistics,
 }: {
     statistics: MayBe<RTCStatsReport>;

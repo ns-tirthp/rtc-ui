@@ -39,12 +39,7 @@ const TestSeverity = ({ totalDataInBytes }: { totalDataInBytes: number }) => {
     const KILOBYTE = 1024;
     const MEGABYTE = 1024 * KILOBYTE;
 
-    let severity = {
-        level: "Unknown",
-        colorClass: "bg-gray-200 text-gray-800",
-        icon: <ChevronDown className="h-4 w-4 mr-1" />, // Default icon
-    };
-
+    let severity;
     if (totalDataInBytes <= 100 * KILOBYTE) {
         // Up to 100 KB
         severity = {
@@ -142,7 +137,7 @@ const PacketIssueList = ({
         </div>
     );
 };
-export const VideoStreamStatistics = ({
+export const DataChannelStatistics = ({
     statistics,
     packets,
     dataChannelStatus,
@@ -168,7 +163,6 @@ export const VideoStreamStatistics = ({
         if (!statistics) return;
         statistics.forEach((report) => {
             if (report.type === "data-channel") {
-                console.log(report);
                 setData((prev) => [
                     ...prev,
                     {

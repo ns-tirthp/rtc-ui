@@ -1,11 +1,11 @@
 "use client";
 
 import Configuration from "@/components/Setting";
-import { StateChip } from "@/components/StateChip";
+import { StateChip } from "@/components/StatusChip";
 import { Film, PlayIcon, Wifi } from "lucide-react";
 import useRTC from "@/hooks/useRTC";
-import { RTCNetworkStatics } from "@/components/Statistics/Video";
-import { VideoStreamStatistics } from "@/components/Statistics/Data";
+import { MediaStreamStatistics } from "@/components/Statistics/MediaStream";
+import { DataChannelStatistics } from "@/components/Statistics/DataChannel";
 
 export default function Home() {
     const {
@@ -51,13 +51,15 @@ export default function Home() {
                 <p className="text-xs text-black">{peerId}</p>
             </div>
             {testMode === "VideoStream" ? (
-                <RTCNetworkStatics statistics={statistics}></RTCNetworkStatics>
+                <MediaStreamStatistics
+                    statistics={statistics}
+                ></MediaStreamStatistics>
             ) : (
-                <VideoStreamStatistics
+                <DataChannelStatistics
                     statistics={statistics}
                     packets={packets}
                     dataChannelStatus={dataChannelState}
-                ></VideoStreamStatistics>
+                ></DataChannelStatistics>
             )}
             <button
                 className="mt-8 px-8 py-4 bg-blue-600 text-white text-xl font-bold rounded-full shadow-lg
