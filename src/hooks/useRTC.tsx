@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MayBe, Message } from "./types";
+import { DataChannelMessage, Maybe, Message } from "./types";
 import { useGlobalStore } from "@/context/GlobalStore";
 
 type TestMode = "DataChannel" | "VideoStream";
@@ -15,14 +15,14 @@ export default function useRTC() {
     const signalingServerUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { frequency, packetSize, duration } = useGlobalStore();
 
-    const pcRef = useRef<MayBe<RTCPeerConnection>>(null); // Peer Connection Ref
-    const dcRef = useRef<MayBe<RTCDataChannel>>(null); // Data Channel Ref
-    const wsRef = useRef<MayBe<WebSocket>>(null); // WebSocket Connection Ref
-    const icRef = useRef<MayBe<RTCIceCandidate[]>>([]); // LocalIce candidates Ref
-    const vuRef = useRef<MayBe<MediaStream>>(null);
-    const siRef = useRef<MayBe<NodeJS.Timeout>>(null);
-    const cvRef = useRef<MayBe<HTMLCanvasElement>>(null);
-    const ctRef = useRef<MayBe<CanvasRenderingContext2D>>(null);
+    const pcRef = useRef<Maybe<RTCPeerConnection>>(null); // Peer Connection Ref
+    const dcRef = useRef<Maybe<RTCDataChannel>>(null); // Data Channel Ref
+    const wsRef = useRef<Maybe<WebSocket>>(null); // WebSocket Connection Ref
+    const icRef = useRef<Maybe<RTCIceCandidate[]>>([]); // LocalIce candidates Ref
+    const vuRef = useRef<Maybe<MediaStream>>(null); // MediaStream Ref
+    const siRef = useRef<Maybe<NodeJS.Timeout>>(null); // Interval Ref
+    const cvRef = useRef<Maybe<HTMLCanvasElement>>(null); // Canvas Ref
+    const ctRef = useRef<Maybe<CanvasRenderingContext2D>>(null); // Context Ref
 
     /**
      * Cleans up all active WebRTC connections and resets state.
@@ -37,7 +37,7 @@ export default function useRTC() {
         dcRef.current = null;
     };
 
-    const [statistics, setStatistics] = useState<MayBe<RTCStatsReport>>(null);
+    const [statistics, setStatistics] = useState<Maybe<RTCStatsReport>>(null);
     /**
      * Periodically dumps RTC statistics.
      */
@@ -161,22 +161,14 @@ export default function useRTC() {
         if (!dcRef.current) return;
 
         dcRef.current.onopen = () => {
-            dcRef.current?.send(`SEND ${getConfiguration.join(" ")}`);
+            wsRef.current?.send(
+                DataChannelMessage.init(getConfiguration.join(" ")),
+            );
         };
 
         dcRef.current.onmessage = (messageEvent) => {
             const { data } = messageEvent;
-            if (typeof data === "string") {
-                if (data === "send ready") {
-                    dcRef.current?.send("send start");
-                }
-                if (data.startsWith("SEND DONE")) {
-                    console.debug(data);
-                    setStopDumpingStats(true);
-                    setTestState("closed");
-                    dcRef.current?.close();
-                }
-            } else {
+            if (data instanceof ArrayBuffer) {
                 const bv = new DataView(data);
                 const sn = bv.getUint16(0, false);
                 const ts = bv.getBigInt64(2, false);
@@ -234,7 +226,31 @@ export default function useRTC() {
         );
     }, [attachListeners, selectChannel]);
 
-    const [peerId, setPeerId] = useState<MayBe<string>>(null);
+    /**
+     * Function to handle initial handshake
+     */
+    const handleDataChannelHandshake = useCallback((parsed: Message) => {
+        if (parsed.type !== "dataChannel") return;
+        const msg = parsed.data;
+        if (msg === "SEND READY") {
+            wsRef.current?.send(DataChannelMessage.ready());
+        } else if (msg.startsWith("SEND DONE")) {
+            setStopDumpingStats(true);
+            setTestState("closed");
+            dcRef.current?.close();
+        }
+    }, []);
+
+    /**
+     * Function to handle server side error
+     */
+    const handleServerSideError = useCallback((parsed: Message) => {
+        if (parsed.type !== "error") return;
+        console.error("Received error from server - ", parsed.data);
+        tearDown();
+    }, []);
+
+    const [peerId, setPeerId] = useState<Maybe<string>>(null);
     /**
      * Main effect for WebSocket connection and handling signaling messages.
      */
@@ -255,6 +271,12 @@ export default function useRTC() {
             const { data } = message;
             const parsed: Message = JSON.parse(data);
             switch (parsed.type) {
+                case "dataChannel":
+                    handleDataChannelHandshake(parsed);
+                    break;
+                case "error":
+                    handleServerSideError(parsed);
+                    break;
                 case "peerId":
                     setPeerId(parsed.peerId);
                     console.log("Received peer ID from server:", parsed.peerId);
@@ -286,7 +308,15 @@ export default function useRTC() {
                     );
             }
         };
-    }, [attachListeners, peerId, initiateOffer, signalingServerUrl, testMode]);
+    }, [
+        attachListeners,
+        peerId,
+        initiateOffer,
+        signalingServerUrl,
+        testMode,
+        handleDataChannelHandshake,
+        handleServerSideError,
+    ]);
 
     return {
         connectionState: peerState,

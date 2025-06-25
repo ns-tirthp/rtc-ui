@@ -1,4 +1,4 @@
-import { MayBe } from "@/hooks/types";
+import { Maybe } from "@/hooks/types";
 import { currentFormattedDate } from "@/utils/helper";
 import { Activity, AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -18,7 +18,7 @@ import {
 export const MediaStreamStatistics = ({
     statistics,
 }: {
-    statistics: MayBe<RTCStatsReport>;
+    statistics: Maybe<RTCStatsReport>;
 }) => {
     const [data, setData] = useState<{ time: string; packetsLost: number }[]>(
         [],

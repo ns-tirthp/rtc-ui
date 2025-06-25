@@ -1,6 +1,6 @@
 import { PacketReceptionHeatmap } from "@/components/HeatMap";
 import { useGlobalStore } from "@/context/GlobalStore";
-import { MayBe } from "@/hooks/types";
+import { Maybe } from "@/hooks/types";
 import {
     convertBytes,
     currentFormattedDate,
@@ -142,7 +142,7 @@ export const DataChannelStatistics = ({
     packets,
     dataChannelStatus,
 }: {
-    statistics: MayBe<RTCStatsReport>;
+    statistics: Maybe<RTCStatsReport>;
     packets: {
         sendAt: bigint;
         receivedAt: bigint;
@@ -184,9 +184,7 @@ export const DataChannelStatistics = ({
     const calculatedPacketLoss = useMemo(() => {
         if (dataChannelStatus !== "closed") return 0;
         const received = data.at(-1)?.messagesReceived ?? 0;
-        return (
-            ((expectedTotalMsg + 2 - received) * 100) / (expectedTotalMsg + 2)
-        );
+        return ((expectedTotalMsg - received) * 100) / expectedTotalMsg;
     }, [expectedTotalMsg, data, dataChannelStatus]);
 
     const missingPacketNumbers = useMemo(() => {

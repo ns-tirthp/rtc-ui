@@ -1,26 +1,32 @@
-export type MayBe<T> = T | null;
-
-export type PeerIdExchange = {
-    type: "peerId";
-    peerId: string;
-};
-
-export type RTCIceCandidateExchange = {
-    type: "iceCandidate";
-    candidate: RTCIceCandidateInit[];
-};
+export type Maybe<T> = T | null;
 
 export type Message =
     | RTCSessionDescriptionInit
-    | RTCIceCandidateExchange
-    | PeerIdExchange;
+    | { type: "peerId"; peerId: string }
+    | { type: "iceCandidate"; candidate: RTCIceCandidateInit[] }
+    | { type: "dataChannel"; data: string }
+    | { type: "error"; data: string };
 
 export interface RTCMediaStatistics extends Partial<RTCInboundRtpStreamStats> {
     time: string;
 }
-
 export interface DataChannelStatistics {
     time: string;
     bytesReceived: number;
     messagesReceived: number;
 }
+
+export const DataChannelMessage = {
+    init(configuration: string) {
+        return JSON.stringify({
+            type: "dataChannel",
+            data: `SEND PREP ${configuration}`,
+        });
+    },
+    ready() {
+        return JSON.stringify({
+            type: "dataChannel",
+            data: "SEND START",
+        });
+    },
+};

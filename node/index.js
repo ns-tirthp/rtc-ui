@@ -60,7 +60,6 @@ function packDataWithSequenceNumber(sequenceNumber, totalBufferSize) {
     // 2. Write UTC Unix Timestamp (8 bytes - milliseconds)
     // Using BigInt for high-resolution timestamp
     const utcTimestamp = BigInt(Date.now());
-    console.log(sequenceNumber, utcTimestamp);
     view.setBigInt64(SEQUENCE_NUMBER_SIZE, utcTimestamp, false); // false for big-endian
 
     // 3. Fill remaining buffer with dummy binary data
@@ -95,163 +94,19 @@ wss.on("connection", function connection(ws) {
     // Send the unique peerId to the client
     ws.send(JSON.stringify({ type: "peerId", peerId: peerId }));
 
-    /**
-     * Sets up a WebRTC Data Channel to send data based on received commands.
-     * It listens for configuration, sends a ready signal, and then starts
-     * transmitting data upon a 'send start' command.
-     *
-     * @param {RTCDataChannel} dataChannel The RTCDataChannel instance to use for sending and receiving commands.
-     */
-    function setupDataSender(dataChannel, peerConnection) {
-        let sendIntervalId = null; // Stores the ID for the setInterval timer
-        let sendTimeoutId = null; // Stores the ID for the setTimeout timer
-        let currentConfig = null; // Stores the parsed configuration { intervalMs, packetSize, durationMs }
+    let dataChannel = null;
+    let currentConfig = null; // Stores the parsed configuration { intervalMs, packetSize, durationMs }
+    let sendIntervalId = null;
 
-        // --- Helper function to stop any ongoing sending ---
-        const stopSending = () => {
-            if (sendIntervalId) {
-                clearInterval(sendIntervalId);
-                sendIntervalId = null;
-                console.log("Sending interval cleared.");
-            }
-            if (sendTimeoutId) {
-                clearTimeout(sendTimeoutId);
-                sendTimeoutId = null;
-                console.log("Sending timeout cleared.");
-            }
-            currentConfig = null; // Clear the configuration
-            console.log("Data sending stopped.");
-        };
-
-        // --- Event listener for incoming messages on the data channel ---
-        dataChannel.onmessage = (event) => {
-            const message = event.data;
-            console.log(`Received command: "${message}"`);
-
-            // 1. Handle "SEND ${frequency} ${packetsize} ${duration}" command
-            const configMatch = message.match(/^SEND (\d+) (\d+) (\d+)$/);
-            if (configMatch) {
-                const intervalMs = parseInt(configMatch[1], 10);
-                const packetSize = parseInt(configMatch[2], 10);
-                const durationMs = parseInt(configMatch[3], 10);
-
-                // Basic validation
-                if (
-                    isNaN(intervalMs) ||
-                    intervalMs <= 0 ||
-                    isNaN(packetSize) ||
-                    packetSize <= 0 ||
-                    isNaN(durationMs) ||
-                    durationMs <= 0
-                ) {
-                    console.error(
-                        "Invalid SEND command parameters. Please use positive numbers for interval, packet size, and duration.",
-                    );
-                    return;
-                }
-
-                currentConfig = { intervalMs, packetSize, durationMs };
-                console.log(
-                    `Configuration received: Send ${intervalMs} packet/second, packet size ${packetSize} bytes, for ${durationMs} Seconds.`,
-                );
-
-                // Send confirmation back
-                try {
-                    dataChannel.send("send ready");
-                    console.log("Sent: 'send ready'");
-                } catch (e) {
-                    console.error("Failed to send 'send ready':", e);
-                }
-            }
-            // 2. Handle "send start" command
-            else if (message === "send start") {
-                if (!currentConfig) {
-                    console.warn(
-                        "Received 'send start' but no configuration was set (use SEND command first).",
-                    );
-                    return;
-                }
-
-                // Stop any previous sending first
-                // stopSending();
-
-                console.log(
-                    `Starting data transmission: ${currentConfig.packetSize} bytes every ${currentConfig.intervalMs}ms for ${currentConfig.durationMs}ms.`,
-                );
-
-                // Start sending interval
-                let packetsSentCount = 0;
-                sendIntervalId = setInterval(async () => {
-                    if (dataChannel.readyState === "open") {
-                        try {
-                            if (
-                                packetsSentCount >=
-                                currentConfig.durationMs *
-                                    currentConfig.intervalMs
-                            ) {
-                                const report = await peerConnection.getStats();
-                                report?.forEach((r) => {
-                                    if (r.type === "data-channel") {
-                                        console.log(
-                                            `Completed sending for ${currentConfig.durationMs}ms. Total packets sent: ${r.messagesSent}. Total bytes send: ${r.bytesSent}`,
-                                        );
-                                        dataChannel.send(
-                                            `SEND DONE ${r.messagesSent} ${r.bytesSent}`,
-                                        );
-                                    }
-                                });
-                                stopSending();
-                            } else {
-                                for (
-                                    let i = 0;
-                                    i < currentConfig.intervalMs;
-                                    i++
-                                ) {
-                                    dataChannel.send(
-                                        packDataWithSequenceNumber(
-                                            packetsSentCount,
-                                            currentConfig.packetSize,
-                                        ),
-                                    );
-                                    packetsSentCount++;
-                                }
-                            }
-                        } catch (e) {
-                            console.error("Error sending data:", e);
-                            // Optionally, stop sending if there's a persistent error
-                            stopSending();
-                        }
-                    } else {
-                        console.warn(
-                            "Data channel not open, stopping send interval.",
-                        );
-                        stopSending();
-                    }
-                }, 1000);
-            } else {
-                console.log(`Unknown command received: "${message}"`);
-            }
-        };
-
-        // --- Handle data channel state changes ---
-        dataChannel.onopen = () => {
-            console.log("Data channel state: open. Ready to receive commands.");
-        };
-
-        dataChannel.onclose = () => {
-            console.log(
-                "Data channel state: closed. Stopping any active sending.",
-            );
-            stopSending(); // Ensure timers are cleared if channel closes unexpectedly
-        };
-
-        dataChannel.onerror = (error) => {
-            console.error("Data channel error:", error);
-            stopSending(); // Clear timers on error
-        };
-
-        console.log("setupDataSender initialized. Waiting for commands...");
-    }
+    const stopSending = () => {
+        if (sendIntervalId) {
+            clearInterval(sendIntervalId);
+            sendIntervalId = null;
+            console.log("Sending interval cleared.");
+        }
+        currentConfig = null; // Clear the configuration
+        console.log("Data sending stopped.");
+    };
 
     // WebSocket message listener for signaling
     ws.on("message", async (message) => {
@@ -304,8 +159,7 @@ wss.on("connection", function connection(ws) {
 
                 newPc.ondatachannel = (event) => {
                     const channel = event.channel;
-                    setupDataSender(channel, newPc);
-                    setInterval(async () => {}, 1000);
+                    dataChannel = channel;
                 };
 
                 newPc.onconnectionstatechange = () => {
@@ -372,6 +226,101 @@ wss.on("connection", function connection(ws) {
                 }
                 break;
 
+            case "dataChannel":
+                const message = signalingMessage.data;
+                const configMatch = message.match(/^SEND PREP (\d+) (\d+) (\d+)$/);
+                if (configMatch) {
+                    const intervalMs = parseInt(configMatch[1], 10);
+                    const packetSize = parseInt(configMatch[2], 10);
+                    const durationMs = parseInt(configMatch[3], 10);
+                    if (
+                        isNaN(intervalMs) ||
+                        intervalMs <= 0 ||
+                        isNaN(packetSize) ||
+                        packetSize <= 0 ||
+                        isNaN(durationMs) ||
+                        durationMs <= 0
+                    ) {
+                        console.error(
+                            "Invalid SEND command parameters. Please use positive numbers for interval, packet size, and duration.",
+                        );
+                        ws.send(JSON.stringify({
+                            type: "error",
+                            data: "Invalid SEND command parameters. Please use positive numbers for interval, packet size, and duration."
+                        }));
+                        return;
+                    }
+                    currentConfig = { intervalMs, packetSize, durationMs };
+                    ws.send(JSON.stringify({
+                        type: 'dataChannel',
+                        data: 'SEND READY'
+                    }))
+                }
+                else if (message === "SEND START") {
+                    if (!currentConfig) {
+                        console.warn(
+                            "Received 'SEND START' but no configuration was set (use SEND command first).",
+                        );
+                        ws.send(JSON.stringify({
+                            type: "error",
+                            data: "Received 'SEND START' but no configuration was set (use SEND command first)."
+                        }));
+                        return;
+                    }
+                    if (!dataChannel || dataChannel.readyState !== 'open') {
+                        console.warn(
+                            "Received 'SEND START' but no data channel was set.",
+                        );
+                        ws.send(JSON.stringify({
+                            type: "error",
+                            data: "Received 'SEND START' but no data channel was set."
+                        }));
+                        return;
+                    }
+                    let packetsSentCount = 0;
+                    sendIntervalId = setInterval(async () => {
+                        try {
+                            if (
+                                packetsSentCount >=
+                                currentConfig.durationMs *
+                                currentConfig.intervalMs
+                            ) {
+                                const report = await pc.getStats();
+                                report?.forEach((r) => {
+                                    if (r.type === "data-channel") {
+                                        console.log(
+                                            `Completed sending for ${currentConfig.durationMs}ms. Total packets sent: ${r.messagesSent}. Total bytes send: ${r.bytesSent}`,
+                                        );
+                                        ws.send(JSON.stringify({
+                                            type: "dataChannel",
+                                            data: `SEND DONE ${r.messagesSent} ${r.bytesSent}`
+                                        }));
+                                    }
+                                });
+                                stopSending();
+                            } else {
+                                for (
+                                    let i = 0;
+                                    i < currentConfig.intervalMs;
+                                    i++
+                                ) {
+                                    dataChannel.send(
+                                        packDataWithSequenceNumber(
+                                            packetsSentCount,
+                                            currentConfig.packetSize,
+                                        ),
+                                    );
+                                    packetsSentCount++;
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error sending data:", e);
+                            // Optionally, stop sending if there's a persistent error
+                            stopSending();
+                        }
+                    }, 1000);
+                }
+                break;
             // Add other signaling message types if needed (e.g., 'hangup')
             default:
                 console.warn(
