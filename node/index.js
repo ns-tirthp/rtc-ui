@@ -228,7 +228,9 @@ wss.on("connection", function connection(ws) {
 
             case "dataChannel":
                 const message = signalingMessage.data;
-                const configMatch = message.match(/^SEND PREP (\d+) (\d+) (\d+)$/);
+                const configMatch = message.match(
+                    /^SEND PREP (\d+) (\d+) (\d+)$/,
+                );
                 if (configMatch) {
                     const intervalMs = parseInt(configMatch[1], 10);
                     const packetSize = parseInt(configMatch[2], 10);
@@ -244,37 +246,44 @@ wss.on("connection", function connection(ws) {
                         console.error(
                             "Invalid SEND command parameters. Please use positive numbers for interval, packet size, and duration.",
                         );
-                        ws.send(JSON.stringify({
-                            type: "error",
-                            data: "Invalid SEND command parameters. Please use positive numbers for interval, packet size, and duration."
-                        }));
+                        ws.send(
+                            JSON.stringify({
+                                type: "error",
+                                data: "Invalid SEND command parameters. Please use positive numbers for interval, packet size, and duration.",
+                            }),
+                        );
                         return;
                     }
                     currentConfig = { intervalMs, packetSize, durationMs };
-                    ws.send(JSON.stringify({
-                        type: 'dataChannel',
-                        data: 'SEND READY'
-                    }))
-                }
-                else if (message === "SEND START") {
+                    ws.send(
+                        JSON.stringify({
+                            type: "dataChannel",
+                            data: "SEND READY",
+                        }),
+                    );
+                } else if (message === "SEND START") {
                     if (!currentConfig) {
                         console.warn(
                             "Received 'SEND START' but no configuration was set (use SEND command first).",
                         );
-                        ws.send(JSON.stringify({
-                            type: "error",
-                            data: "Received 'SEND START' but no configuration was set (use SEND command first)."
-                        }));
+                        ws.send(
+                            JSON.stringify({
+                                type: "error",
+                                data: "Received 'SEND START' but no configuration was set (use SEND command first).",
+                            }),
+                        );
                         return;
                     }
-                    if (!dataChannel || dataChannel.readyState !== 'open') {
+                    if (!dataChannel || dataChannel.readyState !== "open") {
                         console.warn(
                             "Received 'SEND START' but no data channel was set.",
                         );
-                        ws.send(JSON.stringify({
-                            type: "error",
-                            data: "Received 'SEND START' but no data channel was set."
-                        }));
+                        ws.send(
+                            JSON.stringify({
+                                type: "error",
+                                data: "Received 'SEND START' but no data channel was set.",
+                            }),
+                        );
                         return;
                     }
                     let packetsSentCount = 0;
@@ -283,7 +292,7 @@ wss.on("connection", function connection(ws) {
                             if (
                                 packetsSentCount >=
                                 currentConfig.durationMs *
-                                currentConfig.intervalMs
+                                    currentConfig.intervalMs
                             ) {
                                 const report = await pc.getStats();
                                 report?.forEach((r) => {
@@ -291,10 +300,12 @@ wss.on("connection", function connection(ws) {
                                         console.log(
                                             `Completed sending for ${currentConfig.durationMs}ms. Total packets sent: ${r.messagesSent}. Total bytes send: ${r.bytesSent}`,
                                         );
-                                        ws.send(JSON.stringify({
-                                            type: "dataChannel",
-                                            data: `SEND DONE ${r.messagesSent} ${r.bytesSent}`
-                                        }));
+                                        ws.send(
+                                            JSON.stringify({
+                                                type: "dataChannel",
+                                                data: `SEND DONE ${r.messagesSent} ${r.bytesSent}`,
+                                            }),
+                                        );
                                     }
                                 });
                                 stopSending();

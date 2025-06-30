@@ -11,7 +11,7 @@ type DataChannelBufferMessage = {
     sequenceNumber: number;
 };
 
-export default function useRTC() {
+export default function useWebRTC() {
     const signalingServerUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { frequency, packetSize, duration } = useGlobalStore();
 

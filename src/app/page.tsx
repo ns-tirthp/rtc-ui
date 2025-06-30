@@ -3,7 +3,7 @@
 import Configuration from "@/components/Setting";
 import { StateChip } from "@/components/StatusChip";
 import { Film, PlayIcon, Wifi } from "lucide-react";
-import useRTC from "@/hooks/useRTC";
+import useWebRTC from "@/hooks/useWebRTC";
 import { MediaStreamStatistics } from "@/components/Statistics/MediaStream";
 import { DataChannelStatistics } from "@/components/Statistics/DataChannel";
 
@@ -17,7 +17,7 @@ export default function Home() {
         initiateTest,
         connectionState,
         dataChannelState,
-    } = useRTC();
+    } = useWebRTC();
 
     return (
         <div className="flex flex-col justify-center items-center">
