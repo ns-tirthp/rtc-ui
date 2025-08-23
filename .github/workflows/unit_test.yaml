@@ -1,0 +1,24 @@
+name: Run Tests
+on:
+    workflow_dispatch:
+    push:
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [1] # split into 15 parallel runners
+        steps:
+            - uses: actions/checkout@v3
+            - name: Use Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+                  cache: "yarn"
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+            - name: Run tests (sharded)
+              env:
+                  NODE_OPTIONS: "--max_old_space_size=8192"
+              run: yarn test $(node scripts/shard.js -i${{ matrix.shard }} --file timing.json) --silent --verbose
