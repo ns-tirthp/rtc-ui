@@ -18,6 +18,8 @@ jobs:
                   cache: "yarn"
             - name: Install dependencies
               run: yarn install --frozen-lockfile
+            - name: Generate test files
+              run: echo $(node scripts/shard.js --index 1 --file timing.json)
             - name: Run tests (sharded)
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
