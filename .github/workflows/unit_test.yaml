@@ -16,8 +16,8 @@ jobs:
               with:
                   node-version: 20
                   cache: "yarn"
-            # - name: Install dependencies
-            #   run: yarn install --frozen-lockfile
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
             - name: Generate test files
               run: echo $(node scripts/shard.js --index 1 --file timing.json)
             # - name: Run tests (sharded)
