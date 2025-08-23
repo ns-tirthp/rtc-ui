@@ -26,7 +26,7 @@
         "unmatched": 0,
         "updated": 0
     },
-    "startTime": 1755952602450,
+    "startTime": 1755961742964,
     "success": true,
     "testResults": [
         {
@@ -42,7 +42,7 @@
                     "location": null,
                     "numPassingAsserts": 2,
                     "retryReasons": [],
-                    "startAt": 1755952602673,
+                    "startAt": 1755961743218,
                     "status": "passed",
                     "title": "returns default when bytes is undefined or 0"
                 },
@@ -57,7 +57,7 @@
                     "location": null,
                     "numPassingAsserts": 4,
                     "retryReasons": [],
-                    "startAt": 1755952602674,
+                    "startAt": 1755961743219,
                     "status": "passed",
                     "title": "converts bytes to default appropriate unit"
                 },
@@ -72,7 +72,7 @@
                     "location": null,
                     "numPassingAsserts": 2,
                     "retryReasons": [],
-                    "startAt": 1755952602675,
+                    "startAt": 1755961743220,
                     "status": "passed",
                     "title": "converts bytes to explicitly passed unit"
                 },
@@ -87,13 +87,13 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602676,
+                    "startAt": 1755961743220,
                     "status": "passed",
                     "title": "respects fractionDigits"
                 },
                 {
                     "ancestorTitles": ["extractSequenceNumber"],
-                    "duration": 2,
+                    "duration": 3,
                     "failing": false,
                     "failureDetails": [],
                     "failureMessages": [],
@@ -102,13 +102,13 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602676,
+                    "startAt": 1755961743220,
                     "status": "passed",
                     "title": "throws if input is not ArrayBuffer"
                 },
                 {
                     "ancestorTitles": ["extractSequenceNumber"],
-                    "duration": 1,
+                    "duration": 0,
                     "failing": false,
                     "failureDetails": [],
                     "failureMessages": [],
@@ -117,7 +117,7 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602678,
+                    "startAt": 1755961743223,
                     "status": "passed",
                     "title": "throws if buffer is too small"
                 },
@@ -132,7 +132,7 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602679,
+                    "startAt": 1755961743224,
                     "status": "passed",
                     "title": "extracts sequence number from buffer"
                 },
@@ -147,7 +147,7 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602679,
+                    "startAt": 1755961743224,
                     "status": "passed",
                     "title": "finds missing numbers"
                 },
@@ -162,13 +162,13 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602679,
+                    "startAt": 1755961743224,
                     "status": "passed",
                     "title": "returns empty array when none missing"
                 },
                 {
                     "ancestorTitles": ["findMissingSequenceNumber"],
-                    "duration": 1,
+                    "duration": 0,
                     "failing": false,
                     "failureDetails": [],
                     "failureMessages": [],
@@ -177,13 +177,13 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602679,
+                    "startAt": 1755961743224,
                     "status": "passed",
                     "title": "returns all when none received"
                 },
                 {
                     "ancestorTitles": ["packDataWithSequenceNumber"],
-                    "duration": 0,
+                    "duration": 1,
                     "failing": false,
                     "failureDetails": [],
                     "failureMessages": [],
@@ -192,7 +192,7 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602680,
+                    "startAt": 1755961743224,
                     "status": "passed",
                     "title": "throws when fixedPacketSize <= sequenceNumberSize"
                 },
@@ -207,13 +207,13 @@
                     "location": null,
                     "numPassingAsserts": 2,
                     "retryReasons": [],
-                    "startAt": 1755952602680,
+                    "startAt": 1755961743225,
                     "status": "passed",
                     "title": "packs sequence number and fills rest with 0xAA"
                 },
                 {
                     "ancestorTitles": ["currentFormattedDate"],
-                    "duration": 9,
+                    "duration": 8,
                     "failing": false,
                     "failureDetails": [],
                     "failureMessages": [],
@@ -222,15 +222,15 @@
                     "location": null,
                     "numPassingAsserts": 1,
                     "retryReasons": [],
-                    "startAt": 1755952602680,
+                    "startAt": 1755961743225,
                     "status": "passed",
                     "title": "returns formatted time string"
                 }
             ],
-            "endTime": 1755952602689,
+            "endTime": 1755961743234,
             "message": "",
-            "name": "/Users/tirthp/Work/rtc.io.ui.next/src/__tests__/helper.test.ts",
-            "startTime": 1755952602629,
+            "name": "/Users/tirthp/Work/rtc-ui/src/__tests__/helper.test.ts",
+            "startTime": 1755961743152,
             "status": "passed",
             "summary": ""
         }
