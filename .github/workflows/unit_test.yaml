@@ -57,7 +57,7 @@ jobs:
                   npx nyc merge merged-coverage merged-coverage.json
                   npx nyc report --reporter=html --reporter=text --reporter=lcov --temp-dir=merged-coverage
             - name: Upload merged coverage
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: merged-coverage-report
                   path: |
