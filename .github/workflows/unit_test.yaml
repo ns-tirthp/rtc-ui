@@ -51,7 +51,13 @@ jobs:
                   mkdir -p merged-coverage
 
                   # Copy all coverage files to merge directory
-                  find coverage-reports/ -name "*.json" -exec cp {} merged-coverage/ \;
+                  # Find all coverage-final.json files and move them
+                  find coverage-reports -name "coverage-final.json" -type f | while read -r file; do
+                      # Get the parent directory name
+                      parent_dir=$(basename "$(dirname "$file")")
+                      # Move and rename the file
+                      mv "$file" "merged-coverage/${parent_dir}.json"
+                  done
 
                   # Merge coverage using nyc (assuming you're using nyc/istanbul)
                   npx nyc merge merged-coverage merged-coverage.json
