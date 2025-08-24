@@ -28,3 +28,38 @@ jobs:
                   name: coverage-shard-${{ matrix.shard }}
                   path: coverage/
                   retention-days: 1
+
+    merge-coverage:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - name: Use Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+                  cache: "yarn"
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+            - name: Download all coverage reports
+              uses: actions/download-artifact@v4
+              with:
+                  path: coverage-reports/
+            - name: Merge coverage reports
+              run: |
+                  # Create merged coverage directory
+                  mkdir -p merged-coverage
+
+                  # Copy all coverage files to merge directory
+                  find coverage-reports/ -name "*.json" -exec cp {} merged-coverage/ \;
+
+                  # Merge coverage using nyc (assuming you're using nyc/istanbul)
+                  npx nyc merge merged-coverage merged-coverage.json
+                  npx nyc report --reporter=html --reporter=text --reporter=lcov --temp-dir=merged-coverage
+            - name: Upload merged coverage
+              uses: actions/upload-artifact@v3
+              with:
+                  name: merged-coverage-report
+                  path: |
+                      coverage/
+                      merged-coverage.json
