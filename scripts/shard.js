@@ -76,7 +76,6 @@ if (!timingsData.testResults || !Array.isArray(timingsData.testResults)) {
 // ---- Extract Test Files & Durations ----
 const testsWithDurations = timingsData.testResults.map((tr) => {
     const relativePath = path.relative(REPO_ROOT, tr.name || "unknown.test.js");
-    console.log(relativePath, REPO_ROOT);
     const duration =
         tr.endTime && tr.startTime && tr.endTime > tr.startTime
             ? (tr.endTime - tr.startTime) / 1000

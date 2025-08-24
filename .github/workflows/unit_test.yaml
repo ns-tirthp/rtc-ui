@@ -21,4 +21,10 @@ jobs:
             - name: Run tests (sharded)
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
-              run: yarn test $(node scripts/shard.js -i${{ matrix.shard }} --file timing.json) --silent --verbose
+              run: yarn test $(node scripts/shard.js -i${{ matrix.shard }} --file timing.json) --silent --verbose --coverage --coverageReporters=json
+            - name: Upload coverage reports
+              uses: actions/upload-artifact@v3
+              with:
+                  name: coverage-shard-${{ matrix.shard }}
+                  path: coverage/
+                  retention-days: 1

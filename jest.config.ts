@@ -8,7 +8,6 @@ module.exports = {
         "^@/(.*)$": "<rootDir>/src/$1",
         "^.+\\.(png|jpg|jpeg|gif|webp|svg)$": "<rootDir>/__mocks__/fileMock.js",
     },
-    // setupFilesAfterEnv: ["<rootDir>/jest.setup.js", "<rootDir>/setupJest.ts"],
     transform: {
         "^.+\\.(ts|tsx|js|jsx)$": [
             "ts-jest",
