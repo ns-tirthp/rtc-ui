@@ -21,12 +21,18 @@ jobs:
             - name: Run tests (sharded)
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
-              run: yarn test $(node scripts/shard.js -i${{ matrix.shard }} --file timing.json) --silent --verbose --coverage --coverageReporters=json
+              run: yarn test $(node scripts/shard.js -i${{ matrix.shard }} --file timing.json) --silent --verbose --coverage --coverageReporters=json --json --outputFile=timing.json
             - name: Upload coverage reports
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-shard-${{ matrix.shard }}
                   path: coverage/
+                  retention-days: 1
+            - name: Upload timing reports
+              uses: actions/upload-artifact@v4
+              with:
+                  name: timing-shard-${{ matrix.shard }}
+                  path: timing.json
                   retention-days: 1
 
     merge-coverage:
