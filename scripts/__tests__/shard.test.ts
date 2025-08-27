@@ -1,4 +1,4 @@
-import distribute from "../shard";
+import { distribute } from "../shard.mjs";
 import fs from "fs";
 
 jest.spyOn(fs, "existsSync").mockReturnValue(true);

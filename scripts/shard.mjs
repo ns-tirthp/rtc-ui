@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Jest Shard Distributor
  *
@@ -16,7 +15,7 @@ import fs from "fs";
 import path from "path";
 import minimist from "minimist";
 
-function distribute(args) {
+export const distribute = (args) => {
     // Explicit argument parsing
     const TOTAL_SHARDS = parseInt(args.shards, 10);
     const TARGET_SHARD_INDEX = parseInt(args.index, 10);
@@ -113,23 +112,20 @@ function distribute(args) {
 
     // Print space-separated list of test files for the shard
     return selectedShard.files.join(" ");
-}
+};
 
-if (require.main === module) {
-    // ---- Parse CLI Arguments ----
-    const args = minimist(process.argv.slice(2), {
-        alias: {
-            s: "shards",
-            i: "index",
-            f: "file",
-        },
-        default: {
-            shards: 15, // total number of shards
-            index: 1, // which shard index to output
-            file: "test-timings.json", // path to Jest JSON timings file
-        },
-    });
-    const result = distribute(args);
-    console.log(result);
-}
-module.exports = distribute;
+// ---- Parse CLI Arguments ----
+const args = minimist(process.argv.slice(2), {
+    alias: {
+        s: "shards",
+        i: "index",
+        f: "file",
+    },
+    default: {
+        shards: 15, // total number of shards
+        index: 1, // which shard index to output
+        file: "test-timings.json", // path to Jest JSON timings file
+    },
+});
+const result = distribute(args);
+console.log(result);

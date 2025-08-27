@@ -21,6 +21,7 @@ on:
 
 jobs:
     generate-matrix:
+        name: Generate Matrix
         runs-on: ubuntu-latest
         outputs:
             matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -32,6 +33,7 @@ jobs:
                   MATRIX=$(seq -s, 1 $SHARDS | sed 's/^/[/' | sed 's/$/]/')
                   echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
     test-shards: # runs tests in parallel shards
+        name: Test Shards
         runs-on: ubuntu-latest
         needs: generate-matrix
         strategy:
@@ -73,7 +75,7 @@ jobs:
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
               run: |
-                  yarn test $(node scripts/shard.js \
+                  yarn test $(node scripts/shard.mjs \
                     --index ${{ matrix.shard }} \
                     --shards ${{ github.event.inputs.shards }} \
                     --file timing.json \
@@ -85,7 +87,7 @@ jobs:
 
             # Update timing.json file from test report
             - name: Update timing report
-              run: node scripts/processor.js --input report.json --output timing.json
+              run: node scripts/processor.mjs --input report.json --output timing.json
 
             # Upload coverage artifact
             - name: Upload coverage
@@ -105,6 +107,7 @@ jobs:
 
     merge-coverage: # merges coverage results from all shards
         needs: test-shards
+        name: Merge Coverage
         runs-on: ubuntu-latest
         steps:
             # Checkout repository
