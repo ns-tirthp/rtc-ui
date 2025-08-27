@@ -12,10 +12,9 @@
  *   node distribute-tests.js -s 15 -i 3 -f test-timings.json
  *   # prints all test files assigned to shard index 3
  */
-
-const fs = require("fs");
-const path = require("path");
-const minimist = require("minimist");
+import fs from "fs";
+import path from "path";
+import minimist from "minimist";
 
 function distribute(args) {
     // Explicit argument parsing

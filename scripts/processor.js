@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
-const path = require("path");
-const minimist = require("minimist");
+import fs from "fs";
+import path from "path";
+import minimist from "minimist";
 
 // ---- CLI Arguments ----
 const args = minimist(process.argv.slice(2), {

@@ -10,9 +10,9 @@
  *   node updateTimings.js --new new-results.json --out test-timings.json
  */
 
-const fs = require("fs");
-const minimist = require("minimist");
-const path = require("path");
+import fs from "fs";
+import path from "path";
+import minimist from "minimist";
 
 const args = minimist(process.argv.slice(2), {
     alias: { n: "new", o: "out" },
@@ -55,7 +55,7 @@ if (fs.existsSync(OUTPUT_TIMINGS_FILE)) {
         );
     } catch (err) {
         console.warn(
-            `Warning: Failed to parse existing ${OUTPUT_TIMINGS_FILE}, starting fresh.`,
+            `Warning: Failed to parse existing ${OUTPUT_TIMINGS_FILE}, starting fresh. ${err.message}`,
         );
         existingTimings = { testResults: [] };
     }
