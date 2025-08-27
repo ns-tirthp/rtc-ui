@@ -40,7 +40,7 @@ jobs:
             - name: Run tests (sharded)
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
-              run: yarn test $(node scripts/shard.js -i${{ matrix.shard }} --file timing.json) --silent --verbose --coverage --coverageReporters=json --json --outputFile=report.json
+              run: yarn test $(node scripts/shard.js --index ${{ matrix.shard }} --shards 1 --file timing.json {{$CHANGED_TESTS}} ) --silent --verbose --coverage --coverageReporters=json --json --outputFile=report.json
             - name: Proccessing report
               run: node scripts/processor.js --input report.json --output timing.json
             - name: Upload coverage reports
