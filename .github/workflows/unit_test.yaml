@@ -16,6 +16,8 @@ on:
                     - "12"
                     - "15"
     pull_request:
+        types:
+            - opened
 
 jobs:
     test-shards: # runs tests in parallel shards
