@@ -1,7 +1,10 @@
 name: Run Tests
 on:
     workflow_dispatch:
-    push:
+    pull_request:
+        types:
+            - opened
+
 jobs:
     test:
         runs-on: ubuntu-latest
@@ -18,6 +21,24 @@ jobs:
                   cache: "yarn"
             - name: Install dependencies
               run: yarn install --frozen-lockfile
+            - name: Get changed test files
+              id: diff
+              run: |
+                  BASE=${{ github.event.pull_request.base.sha }}
+                  HEAD=${{ github.sha }}
+
+                  echo "Comparing $BASE...$HEAD"
+
+                  # Get changed files containing "test"
+                  files=$(git diff --name-only $BASE $HEAD | grep "test" || true)
+
+                  # Convert to space-separated string
+                  files_space=$(echo $files | xargs)
+
+                  echo "Found test files: $files_space"
+
+                  # Export as variable for later steps
+                  echo "CHANGED_TESTS=$files_space" >> $GITHUB_ENV
             - name: Run tests (sharded)
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
