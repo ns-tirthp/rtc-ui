@@ -26,21 +26,24 @@ jobs:
                   HEAD: ${{ github.event.pull_request.head.sha }}
               run: |
                   echo "Comparing $BASE...$HEAD"
+
                   # Ensure we have both commits
                   git fetch origin ${{ github.event.pull_request.base.ref }}
                   git fetch origin ${{ github.event.pull_request.head.ref }}
 
                   # Get changed files containing "test"
                   files=$(git diff --name-only $BASE $HEAD | grep -E '\.test\.(ts|js|jsx|tsx)$' || true)
+
                   # Convert to space-separated string
                   files_space=$(echo $files | xargs)
                   echo "Found test files: $files_space"
+
                   # Export as variable for later steps
                   echo "CHANGED_TESTS=$files_space" >> $GITHUB_ENV
-            - name: Run tests (sharded)
+            - name: Run tests
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
-              run: yarn test $(node scripts/shard.js --index ${{ matrix.shard }} --shards 1 --file timing.json {{$CHANGED_TESTS}} ) --silent --verbose --coverage --coverageReporters=json --json --outputFile=report.json
+              run: yarn test $(node scripts/shard.js --index ${{ matrix.shard }} --shards 1 --file timing.json $CHANGED_TESTS) --silent --verbose --coverage --coverageReporters=json --json --outputFile=report.json
             - name: Proccessing report
               run: node scripts/processor.js --input report.json --output timing.json
             - name: Upload coverage reports
