@@ -28,15 +28,15 @@ jobs:
                   HEAD: ${{ github.event.pull_request.head.sha }}
               run: |
                   echo "Comparing $BASE...$HEAD"
+                  # Ensure we have both commits
+                  git fetch origin ${{ github.event.pull_request.base.ref }}
+                  git fetch origin ${{ github.event.pull_request.head.ref }}
 
                   # Get changed files containing "test"
                   files=$(git diff --name-only $BASE $HEAD | grep "test" || true)
-
                   # Convert to space-separated string
                   files_space=$(echo $files | xargs)
-
                   echo "Found test files: $files_space"
-
                   # Export as variable for later steps
                   echo "CHANGED_TESTS=$files_space" >> $GITHUB_ENV
             - name: Run tests (sharded)
