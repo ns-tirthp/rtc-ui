@@ -23,7 +23,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                shard: [1] # split into 15 parallel runners
+                shard: ${{ fromJSON('[' + join(github.event.inputs.shards && range(1, github.event.inputs.shards + 1) || '1', ',') + ']') }}
         steps:
             # Checkout repository
             - name: Checkout code
@@ -61,7 +61,7 @@ jobs:
               run: |
                   yarn test $(node scripts/shard.js \
                     --index ${{ matrix.shard }} \
-                    --shards 1 \
+                    --shards ${{ github.event.inputs.shards }} \
                     --file timing.json \
                     $CHANGED_TESTS) \
                     --silent --verbose \
