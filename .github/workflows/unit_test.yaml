@@ -2,8 +2,6 @@ name: Run Tests
 on:
     workflow_dispatch:
     pull_request:
-        types:
-            - opened
 
 jobs:
     test:
@@ -21,7 +19,7 @@ jobs:
                   cache: "yarn"
             - name: Install dependencies
               run: yarn install --frozen-lockfile
-            - name: Get changed test files
+            - name: Identify changed test files
               id: diff
               env:
                   BASE: ${{ github.event.pull_request.base.sha }}
@@ -33,7 +31,7 @@ jobs:
                   git fetch origin ${{ github.event.pull_request.head.ref }}
 
                   # Get changed files containing "test"
-                  files=$(git diff --name-only $BASE $HEAD | grep "test" || true)
+                  files=$(git diff --name-only $BASE $HEAD | grep -E '\.test\.(ts|js|jsx|tsx)$' || true)
                   # Convert to space-separated string
                   files_space=$(echo $files | xargs)
                   echo "Found test files: $files_space"
