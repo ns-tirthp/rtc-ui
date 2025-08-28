@@ -32,6 +32,26 @@ jobs:
                   SHARDS=${{ github.event.inputs.shards || 1 }}
                   MATRIX=$(seq -s, 1 $SHARDS | sed 's/^/[/' | sed 's/$/]/')
                   echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+    pre-processing:
+        name: Syncing test suits
+        runs-on: ubuntu-latest
+        steps:
+            # Identify changed test files in PR
+            - name: Detect changed test files
+              id: diff
+              run: |
+                  BASE=${{ github.event.pull_request.base.sha }}
+                  HEAD=${{ github.event.pull_request.head.sha }}
+
+                  # Ensure both commits are available
+                  git fetch origin ${{ github.event.pull_request.base.ref }}
+                  git fetch origin ${{ github.event.pull_request.head.ref }}
+
+                  # Get changed files containing ".test.ts/js/tsx/jsx"
+                  files=$(git diff --name-only $BASE $HEAD | grep -E '\.test\.(ts|js|jsx|tsx)$' || true)
+
+                  # Export as space-separated string for later use
+                  echo "CHANGED_TESTS=$(echo $files | xargs)" >> $GITHUB_ENV
     test-shards: # runs tests in parallel shards
         name: Test Shards
         runs-on: ubuntu-latest
@@ -52,23 +72,6 @@ jobs:
                   node-version: 20
                   cache: "yarn"
             - run: yarn install --frozen-lockfile
-
-            # Identify changed test files in PR
-            - name: Detect changed test files
-              id: diff
-              run: |
-                  BASE=${{ github.event.pull_request.base.sha }}
-                  HEAD=${{ github.event.pull_request.head.sha }}
-
-                  # Ensure both commits are available
-                  git fetch origin ${{ github.event.pull_request.base.ref }}
-                  git fetch origin ${{ github.event.pull_request.head.ref }}
-
-                  # Get changed files containing ".test.ts/js/tsx/jsx"
-                  files=$(git diff --name-only $BASE $HEAD | grep -E '\.test\.(ts|js|jsx|tsx)$' || true)
-
-                  # Export as space-separated string for later use
-                  echo "CHANGED_TESTS=$(echo $files | xargs)" >> $GITHUB_ENV
 
             # Run tests using sharding
             - name: Run tests (Shard ${{ matrix.shard }})
