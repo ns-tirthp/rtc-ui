@@ -20,23 +20,11 @@ on:
             - opened
 
 jobs:
-    generate-matrix:
-        name: Generate Matrix
+    pre-processing:
+        name: Generate Matrix & Prepare shards
         runs-on: ubuntu-latest
         outputs:
-            matrix: ${{ steps.set-matrix.outputs.matrix }}
-        steps:
-            - name: Generate matrix
-              id: set-matrix
-              run: |
-                  SHARDS=${{ github.event.inputs.shards || 1 }}
-                  MATRIX=$(seq -s, 1 $SHARDS | sed 's/^/[/' | sed 's/$/]/')
-                  echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-
-    pre-processing:
-        name: Syncing test suits
-        needs: generate-matrix
-        runs-on: ubuntu-latest
+            shards: ${{ steps.set-shard-files.outputs.shards }}
         steps:
             # Checkout repository
             - name: Checkout code
@@ -68,19 +56,8 @@ jobs:
             - name: Generate shard test files
               id: set-shard-files
               run: |
-
-                  SHARDS=${{ github.event.inputs.shards || 1 }}
-                  MATRIX=${{ needs.generate-matrix.outputs.matrix }}
-
-                  for i in $(seq 1 $SHARDS); do
-                    FILES=$(node scripts/shard.mjs \
-                      --index $i \
-                      --shards $SHARDS \
-                      --file timing.json \
-                      $CHANGED_TESTS)
-
-                    echo "SHARD_${i}_FILES=$FILES" >> $GITHUB_ENV
-                  done
+                  FILES=$(node scripts/shard.mjs $CHANGED_TESTS)
+                  echo "shards=$FILES" >> "$GITHUB_OUTPUT"
 
     test-shards: # runs tests in parallel shards
         name: Test Shards
@@ -89,7 +66,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                shard: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+                shard: ${{ fromJSON(needs.pre-processing.outputs.shards) }}
         steps:
             # Checkout repository
             - name: Checkout code
@@ -108,9 +85,7 @@ jobs:
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
               run: |
-                  eval "files=\$SHARD_${i}_FILES"
-                  echo "Shard ${i} files: $files"
-                  yarn test $files \
+                  yarn test ${{ matrix.shard }} \
                     --silent --verbose \
                     --coverage \
                     --coverageReporters=json \

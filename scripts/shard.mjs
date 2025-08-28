@@ -110,8 +110,11 @@ export const distribute = (args) => {
         process.exit(0);
     }
 
+    let allShards = shards
+        .filter((shard) => shard.files.length > 0)
+        .map((shard) => shard.files.join(" "));
     // Print space-separated list of test files for the shard
-    return selectedShard.files.join(" ");
+    return allShards;
 };
 
 // ---- Parse CLI Arguments ----
@@ -122,9 +125,9 @@ const args = minimist(process.argv.slice(2), {
         f: "file",
     },
     default: {
-        shards: 15, // total number of shards
+        shards: 1, // total number of shards
         index: 1, // which shard index to output
-        file: "test-timings.json", // path to Jest JSON timings file
+        file: "timing.json", // path to Jest JSON timings file
     },
 });
 const result = distribute(args);
