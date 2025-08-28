@@ -107,12 +107,9 @@ jobs:
             - name: Run tests (Shard ${{ matrix.shard }})
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
+                  FILES: ${SHARD_${{ matrix.shard }}_FILES}
               run: |
-                  yarn test $(node scripts/shard.mjs \
-                    --index ${{ matrix.shard }} \
-                    --shards ${{ github.event.inputs.shards }} \
-                    --file timing.json \
-                    $CHANGED_TESTS) \
+                  yarn test $FILES \
                     --silent --verbose \
                     --coverage \
                     --coverageReporters=json \
