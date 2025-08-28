@@ -72,6 +72,8 @@ jobs:
             # Setup Node.js and install dependencies
             - name: Setup Node.js & Install dependencies
               uses: actions/setup-node@v3
+              with:
+                  node-version: 20
 
             - name: Generate shard test files
               id: set-shard-files
