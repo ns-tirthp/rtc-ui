@@ -117,17 +117,12 @@ jobs:
         name: Merge Coverage
         runs-on: ubuntu-latest
         steps:
-            # Checkout repository
-            - name: Checkout code
-              uses: actions/checkout@v3
-
             # Setup Node.js and install dependencies
             - name: Setup Node.js & Install dependencies
               uses: actions/setup-node@v3
               with:
                   node-version: 20
                   cache: "yarn"
-            - run: yarn install --frozen-lockfile
 
             # Download all coverage artifacts
             - name: Download coverage artifacts
@@ -138,6 +133,9 @@ jobs:
             # Merge coverage reports from all shards
             - name: Merge coverage reports
               run: |
+                  yarn init -y
+                  yarn add nyc --dev
+
                   # Create merge directory
                   mkdir -p merged-coverage
 
