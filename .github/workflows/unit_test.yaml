@@ -122,7 +122,6 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-                  cache: "yarn"
 
             # Download all coverage artifacts
             - name: Download coverage artifacts
@@ -133,8 +132,7 @@ jobs:
             # Merge coverage reports from all shards
             - name: Merge coverage reports
               run: |
-                  yarn init -y
-                  yarn add nyc --dev
+                  npm install -g nyc
 
                   # Create merge directory
                   mkdir -p merged-coverage
