@@ -20,22 +20,13 @@ on:
             - opened
 
 jobs:
-    generate-matrix:
-        name: Generate Matrix
-        runs-on: ubuntu-latest
-        outputs:
-            matrix: ${{ steps.set-matrix.outputs.matrix }}
-        steps:
-            - name: Generate matrix
-              id: set-matrix
-              run: |
-                  SHARDS=${{ github.event.inputs.shards || 1 }}
-                  MATRIX=$(seq -s, 1 $SHARDS | sed 's/^/[/' | sed 's/$/]/')
-                  echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
     pre-processing:
         name: Syncing test suits
         runs-on: ubuntu-latest
         steps:
+            # Checkout repository
+            - name: Checkout code
+              uses: actions/checkout@v3
             # Identify changed test files in PR
             - name: Detect changed test files
               id: diff
@@ -52,6 +43,19 @@ jobs:
 
                   # Export as space-separated string for later use
                   echo "CHANGED_TESTS=$(echo $files | xargs)" >> $GITHUB_ENV
+    generate-matrix:
+        name: Generate Matrix
+        needs: pre-processing
+        runs-on: ubuntu-latest
+        outputs:
+            matrix: ${{ steps.set-matrix.outputs.matrix }}
+        steps:
+            - name: Generate matrix
+              id: set-matrix
+              run: |
+                  SHARDS=${{ github.event.inputs.shards || 1 }}
+                  MATRIX=$(seq -s, 1 $SHARDS | sed 's/^/[/' | sed 's/$/]/')
+                  echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
     test-shards: # runs tests in parallel shards
         name: Test Shards
         runs-on: ubuntu-latest
