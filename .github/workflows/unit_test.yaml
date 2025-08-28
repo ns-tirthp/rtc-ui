@@ -43,6 +43,7 @@ jobs:
 
                   # Export as space-separated string for later use
                   echo "CHANGED_TESTS=$(echo $files | xargs)" >> $GITHUB_ENV
+
     generate-matrix:
         name: Generate Matrix
         needs: pre-processing
@@ -56,6 +57,30 @@ jobs:
                   SHARDS=${{ github.event.inputs.shards || 1 }}
                   MATRIX=$(seq -s, 1 $SHARDS | sed 's/^/[/' | sed 's/$/]/')
                   echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+    generate-shard-files:
+        name: Generate Shard Files
+        needs: generate-matrix
+        runs-on: ubuntu-latest
+        outputs:
+            shard-files: ${{ steps.set-shard-files.outputs.shard-files }}
+        steps:
+            - name: Generate shard test files
+              id: set-shard-files
+              run: |
+                  SHARDS=${{ github.event.inputs.shards || 1 }}
+                  MATRIX=${{ needs.generate-matrix.outputs.matrix }}
+
+                  for i in $(seq 1 $SHARDS); do
+                    FILES=$(node scripts/shard.mjs \
+                      --index $i \
+                      --shards $SHARDS \
+                      --file timing.json \
+                      $CHANGED_TESTS)
+
+                    echo "SHARD_${i}_FILES=$FILES" >> $GITHUB_ENV
+                  done
+
     test-shards: # runs tests in parallel shards
         name: Test Shards
         runs-on: ubuntu-latest
@@ -90,14 +115,15 @@ jobs:
                     --silent --verbose \
                     --coverage \
                     --coverageReporters=json \
-                    --json --outputFile=report.json
+                    --json --outputFile=report.json \
+                    --passWithNoTests
 
             # Update timing.json file from test report
             - name: Update timing report
               run: node scripts/processor.mjs --input report.json --output timing.json
 
-            # Upload coverage artifact
-            - name: Upload coverage
+            # Cache coverage artifact
+            - name: Cache coverage
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-shard-${{ matrix.shard }}
