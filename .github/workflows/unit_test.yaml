@@ -81,11 +81,11 @@ jobs:
             - run: yarn install --frozen-lockfile
 
             # Run tests using sharding
-            - name: Run tests (Shard ${{ matrix.shard }})
+            - name: Run tests
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
               run: |
-                  yarn test ${{ matrix.shard }} \
+                  yarn test ${{ matrix.shard.files }} \
                     --silent --verbose \
                     --coverage \
                     --coverageReporters=json \
@@ -100,7 +100,7 @@ jobs:
             - name: Cache coverage
               uses: actions/upload-artifact@v4
               with:
-                  name: coverage-shard-${{ matrix.shard }}
+                  name: coverage-shard-${{ matrix.shard.index }}
                   path: coverage/
                   retention-days: 1
 
@@ -108,7 +108,7 @@ jobs:
             - name: Upload timing
               uses: actions/upload-artifact@v4
               with:
-                  name: timing-shard-${{ matrix.shard }}
+                  name: timing-shard-${{ matrix.shard.index }}
                   path: timing.json
                   retention-days: 1
 

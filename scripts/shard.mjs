@@ -114,7 +114,9 @@ export const distribute = (args) => {
         .filter((shard) => shard.files.length > 0)
         .map((shard) => shard.files.join(" "));
     // Print space-separated list of test files for the shard
-    return allShards;
+    return allShards.map((shard, index) => {
+        return { index: index + 1, files: shard };
+    });
 };
 
 // ---- Parse CLI Arguments ----
