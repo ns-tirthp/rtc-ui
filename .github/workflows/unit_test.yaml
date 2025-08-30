@@ -56,7 +56,7 @@ jobs:
             - name: Generate shard test files
               id: set-shard-files
               run: |
-                  FILES=$(node scripts/shard.mjs $CHANGED_TESTS)
+                  FILES=$(node scripts/distributeTests.mjs $CHANGED_TESTS)
                   echo "shards=$FILES" >> "$GITHUB_OUTPUT"
 
     test-shards: # runs tests in parallel shards
