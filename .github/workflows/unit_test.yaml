@@ -1,79 +1,144 @@
-name: Run Tests
+name: CI - Tests & Coverage
+
 on:
     workflow_dispatch:
-    push:
+        inputs:
+            shards:
+                description: "Select number of shards to split tests"
+                required: true
+                default: "1"
+                type: choice
+                options:
+                    - "1"
+                    - "2"
+                    - "4"
+                    - "8"
+                    - "12"
+                    - "15"
+    pull_request:
+        types:
+            - opened
+
 jobs:
-    test:
+    pre-processing:
+        name: Generate Matrix & Prepare shards
         runs-on: ubuntu-latest
+        outputs:
+            shards: ${{ steps.set-shard-files.outputs.shards }}
+        steps:
+            # Checkout repository
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            # Setup Node.js and install dependencies
+            - name: Setup Node.js & Install dependencies
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+            - run: yarn install --frozen-lockfile
+
+            # Identify changed test files in PR
+            - name: Detect changed test files
+              id: diff
+              run: |
+                  BASE=${{ github.event.pull_request.base.sha }}
+                  HEAD=${{ github.event.pull_request.head.sha }}
+
+                  # Ensure both commits are available
+                  git fetch origin ${{ github.event.pull_request.base.ref }}
+                  git fetch origin ${{ github.event.pull_request.head.ref }}
+
+                  # Get changed files containing ".test.ts/js/tsx/jsx"
+                  files=$(git diff --name-only $BASE $HEAD | grep -E '\.test\.(ts|js|jsx|tsx)$' || true)
+
+                  # Export as space-separated string for later use
+                  echo "CHANGED_TESTS=$(echo $files | xargs)" >> $GITHUB_ENV
+            - name: Generate shard test files
+              id: set-shard-files
+              run: |
+                  FILES=$(node scripts/shard.mjs $CHANGED_TESTS)
+                  echo "shards=$FILES" >> "$GITHUB_OUTPUT"
+
+    test-shards: # runs tests in parallel shards
+        name: Test Shards
+        runs-on: ubuntu-latest
+        needs: pre-processing
         strategy:
             fail-fast: false
             matrix:
-                shard: [1] # split into 15 parallel runners
+                shard: ${{ fromJSON(needs.pre-processing.outputs.shards) }}
         steps:
-            - uses: actions/checkout@v3
-            - name: Use Node.js
+            # Checkout repository
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            # Setup Node.js and install dependencies
+            - name: Setup Node.js & Install dependencies
               uses: actions/setup-node@v3
               with:
                   node-version: 20
                   cache: "yarn"
-            - name: Install dependencies
-              run: yarn install --frozen-lockfile
-            - name: Run tests (sharded)
+            - run: yarn install --frozen-lockfile
+
+            # Run tests using sharding
+            - name: Run tests
               env:
                   NODE_OPTIONS: "--max_old_space_size=8192"
-              run: yarn test $(node scripts/shard.js -i${{ matrix.shard }} --file timing.json) --silent --verbose --coverage --coverageReporters=json --json --outputFile=report.json
-            - name: Proccessing report
-              run: node scripts/processor.js --input report.json --output timing.json
-            - name: Upload coverage reports
+              run: |
+                  yarn test ${{ matrix.shard.files }} \
+                    --silent --verbose \
+                    --coverage \
+                    --coverageReporters=json \
+                    --passWithNoTests
+
+              # Cache coverage artifact
+            - name: Coverage
               uses: actions/upload-artifact@v4
               with:
-                  name: coverage-shard-${{ matrix.shard }}
+                  name: coverage-shard-${{ matrix.shard.index }}
                   path: coverage/
                   retention-days: 1
-            - name: Upload timing reports
-              uses: actions/upload-artifact@v4
-              with:
-                  name: timing-shard-${{ matrix.shard }}
-                  path: timing.json
-                  retention-days: 1
 
-    merge-coverage:
-        needs: test
+    merge-coverage: # merges coverage results from all shards
+        needs: test-shards
+        name: Merge Coverage
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v3
-            - name: Use Node.js
+            # Setup Node.js and install dependencies
+            - name: Setup Node.js & Install dependencies
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-                  cache: "yarn"
-            - name: Install dependencies
-              run: yarn install --frozen-lockfile
-            - name: Download all coverage reports
+
+            # Download all coverage artifacts
+            - name: Download coverage artifacts
               uses: actions/download-artifact@v4
               with:
                   path: coverage-reports/
+
+            # Merge coverage reports from all shards
             - name: Merge coverage reports
               run: |
-                  # Create merged coverage directory
+                  npm install -g nyc
+
+                  # Create merge directory
                   mkdir -p merged-coverage
 
-                  # Copy all coverage files to merge directory
-                  # Find all coverage-final.json files and move them
+                  # Collect coverage-final.json files
                   find coverage-reports -name "coverage-final.json" -type f | while read -r file; do
-                      # Get the parent directory name
-                      parent_dir=$(basename "$(dirname "$file")")
-                      # Move and rename the file
-                      mv "$file" "merged-coverage/${parent_dir}.json"
+                    parent_dir=$(basename "$(dirname "$file")")
+                    mv "$file" "merged-coverage/${parent_dir}.json"
                   done
 
-                  # Merge coverage using nyc (assuming you're using nyc/istanbul)
+                  # Merge coverage using nyc
                   npx nyc merge merged-coverage merged-coverage.json
                   npx nyc report --reporter=html --reporter=text --reporter=lcov --temp-dir=merged-coverage
+
+            # Upload final merged coverage report
             - name: Upload merged coverage
               uses: actions/upload-artifact@v4
               with:
-                  name: merged-coverage-report
+                  name: merged-coverage
                   path: |
                       coverage/
                       merged-coverage.json

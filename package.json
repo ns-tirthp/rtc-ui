@@ -6,11 +6,13 @@
         "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
-        "lint": "next lint",
-        "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+        "lint": "eslint \"src/**/*.{js,jsx,ts,tsx,mjs}\" --color --max-warnings=0",
+        "prettier": "prettier \"**/*.ts\" \"**/*.tsx\" --write",
         "build-server": "docker build --file docker/Dockerfile -t webrtc-node-server .",
         "start-server": "docker run -p 8080:8080 -d webrtc-node-server:latest",
-        "test": "jest"
+        "test": "jest",
+        "test:sync": "jest --runInBand",
+        "prepare": "husky"
     },
     "dependencies": {
         "istanbul": "^0.4.5",
@@ -37,8 +39,10 @@
         "eslint-config-next": "15.3.3",
         "eslint-config-prettier": "^10.1.5",
         "eslint-plugin-prettier": "^5.4.1",
+        "husky": "^9.1.7",
         "jest": "^30.0.5",
         "jest-environment-jsdom": "^30.0.5",
+        "lint-staged": "^16.1.5",
         "prettier": "^3.5.3",
         "prettier-plugin-tailwindcss": "^0.6.12",
         "tailwindcss": "^4",
