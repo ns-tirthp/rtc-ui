@@ -101,7 +101,6 @@ if [ -n "$NEW_D_TEST_FILES" ]; then
 
     print_status "Pre-commit cleanup completed" "success"
     echo "${GRAY}${DIM}════════════════════════════════════════════════════════════${NC}"
-    exit 0
 fi
 
 # Handle case with no new test files
