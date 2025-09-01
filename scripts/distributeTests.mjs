@@ -157,7 +157,7 @@ async function main() {
 
         if (targetShardIndex === null) {
             // If no index was provided, output all shards in JSON format
-            console.log(allShardsOutput);
+            console.log(JSON.stringify(allShardsOutput));
         } else {
             // If a specific index was provided, find and output only that shard
             const selectedShardOutput = allShardsOutput.find(
