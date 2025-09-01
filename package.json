@@ -11,8 +11,17 @@
         "build-server": "docker build --file docker/Dockerfile -t webrtc-node-server .",
         "start-server": "docker run -p 8080:8080 -d webrtc-node-server:latest",
         "test": "jest",
-        "test:sync": "jest --runInBand",
-        "prepare": "husky"
+        "prepare": "husky",
+        "sync": "sh scripts/sync-test-time.sh"
+    },
+    "lint-staged": {
+        "*.{js,jsx,ts,tsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "*": [
+            "yarn run sync"
+        ]
     },
     "dependencies": {
         "istanbul": "^0.4.5",
