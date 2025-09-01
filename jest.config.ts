@@ -1,5 +1,6 @@
 module.exports = {
     testEnvironment: "jsdom",
+    testResultsProcessor: "./postProcessor.js",
     moduleNameMapper: {
         "next/font/google": "<rootDir>/__mocks__/next/font/google.js",
         "^@/.*\\.(css|less|scss|sass)$": "<rootDir>/__mocks__/fileMock.js",
