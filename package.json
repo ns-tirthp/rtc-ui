@@ -28,6 +28,7 @@
         "lucide-react": "^0.514.0",
         "minimist": "^1.2.8",
         "next": "15.3.3",
+        "nyc": "^17.1.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "recharts": "^2.15.3"
