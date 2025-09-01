@@ -37,8 +37,10 @@ jobs:
 
             - name: Generate shard test files
               id: set-shard-files
+              env:
+                  SHARD_COUNT: ${{ github.event.inputs.shards || '1' }}
               run: |
-                  FILES=$(node scripts/distributeTests.mjs --shards ${{ github.event.inputs.shards }})
+                  FILES=$(node scripts/distributeTests.mjs --shards ${{ env.SHARD_COUNT }})
                   echo "shards=$FILES" >> "$GITHUB_OUTPUT"
 
     test-shards: # runs tests in parallel shards
