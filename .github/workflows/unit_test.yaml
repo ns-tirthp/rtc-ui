@@ -106,7 +106,6 @@ jobs:
             # Merge coverage reports from all shards
             - name: Merge coverage reports
               run: sh scripts/combine-coverage.sh
-              shell: bash
 
             # Upload final merged coverage report
             - name: Upload merged coverage

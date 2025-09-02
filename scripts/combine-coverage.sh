@@ -158,10 +158,9 @@ print_header "Coverage Report Generation" "$GREEN"
 show_progress "Generating comprehensive coverage reports..."
 
 # Generate reports with progress indication
-report_types=("HTML" "Text" "LCOV")
-for report_type in "${report_types[@]}"; do
-    print_status "Generating ${report_type} report format" "chart"
-done
+print_status "Generating HTML report format" "chart"
+print_status "Generating Text report format" "chart"
+print_status "Generating LCOV report format" "chart"
 
 if npx nyc report \
     --reporter=html \
