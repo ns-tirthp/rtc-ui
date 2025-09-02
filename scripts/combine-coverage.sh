@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # Enhanced color palette and styling
 BLUE='\033[0;34m'
@@ -114,31 +113,39 @@ print_status "Searching in coverage-reports directory tree" "search"
 
 # Collect coverage files with enhanced feedback
 count=0
-temp_file=$(mktemp)
 
-find coverage-reports -name "coverage-final.json" -type f > "$temp_file"
+# Check if coverage-reports directory exists
+if [ ! -d "coverage-reports" ]; then
+    print_status "coverage-reports directory not found" "error"
+    print_status "Expected directory structure: coverage-reports/" "info"
+    echo "${GRAY}${DIM}══════════════════════════════════════════════════════════════${NC}"
+    exit 1
+fi
 
-if [ ! -s "$temp_file" ]; then
+# Use array to collect files more safely
+coverage_files=()
+while IFS= read -r -d '' file; do
+    coverage_files+=("$file")
+done < <(find coverage-reports -name "coverage-final.json" -type f -print0 2>/dev/null || true)
+
+if [ ${#coverage_files[@]} -eq 0 ]; then
     print_status "No coverage-final.json files found in coverage-reports/" "error"
     print_status "Ensure your test shards have generated coverage files" "info"
     print_status "Expected location: coverage-reports/**/coverage-final.json" "info"
-    rm "$temp_file"
     echo "${GRAY}${DIM}══════════════════════════════════════════════════════════════${NC}"
     exit 1
 fi
 
 # Process files with visual feedback
-print_status "Found coverage files - preparing for merge" "success"
+print_status "Found ${#coverage_files[@]} coverage files - preparing for merge" "success"
 echo "${DIM}${GRAY}Files discovered:${NC}"
 
-while IFS= read -r file; do
+for file in "${coverage_files[@]}"; do
     shard_name="shard_$count.json"
     print_file_operation "$file" "merged-coverage/$shard_name"
     cp "$file" "merged-coverage/$shard_name"
     count=$((count+1))
-done < "$temp_file"
-
-rm "$temp_file"
+done
 
 # Display collection summary
 print_stats "Total Shards Found" "$count"
