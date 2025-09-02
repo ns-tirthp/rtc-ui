@@ -112,12 +112,12 @@ show_progress "Scanning for coverage-final.json files..."
 print_status "Searching in coverage-reports directory tree" "search"
 
 # Collect coverage files with enhanced feedback
-count=1
+count=0
 find coverage-reports -name "coverage-final.json" -type f | while read -r file; do
   shard_name="shard_$count.json"
   print_file_operation "$file" "merged-coverage/$shard_name"
   cp "$file" "merged-coverage/$shard_name"
-  ((count++))
+  count=$((count + 1))
 done
 
 if [ "$count" -eq 0 ]; then
