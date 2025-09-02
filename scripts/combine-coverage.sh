@@ -113,7 +113,7 @@ print_status "Searching in coverage-reports directory tree" "search"
 
 # Collect coverage files with enhanced feedback
 count=0
-find coverage-reports -name "coverage-final.json" -type f | while read -r file; do
+for file in $(find coverage-reports -name "coverage-final.json" -type f); do
   shard_name="shard_$count.json"
   print_file_operation "$file" "merged-coverage/$shard_name"
   cp "$file" "merged-coverage/$shard_name"
