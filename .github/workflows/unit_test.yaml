@@ -33,14 +33,12 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-            - run: yarn install --frozen-lockfile
 
             - name: Generate shard test files
               id: set-shard-files
               env:
                   SHARD_COUNT: ${{ github.event.inputs.shards || '3' }}
               run: |
-                  echo "all shards Files: $(node scripts/distributeTests.mjs --shards ${{ env.SHARD_COUNT }})"
                   FILES=$(node scripts/distributeTests.mjs --shards ${{ env.SHARD_COUNT }})
                   echo "shards=$FILES" >> "$GITHUB_OUTPUT"
 
@@ -81,7 +79,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-shard-${{ matrix.shard.index }}
-                  path: coverage/
+                  path: coverage/coverage-final.json
                   retention-days: 1
 
     merge-coverage: # merges coverage results from all shards
@@ -98,8 +96,6 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-                  cache: "yarn"
-            - run: yarn install --frozen-lockfile
 
             # Download all coverage artifacts
             - name: Download coverage artifacts
@@ -109,20 +105,7 @@ jobs:
 
             # Merge coverage reports from all shards
             - name: Merge coverage reports
-              run: |
-
-                  # Create merge directory
-                  mkdir -p merged-coverage
-
-                  # Collect coverage-final.json files
-                  find coverage-reports -name "coverage-final.json" -type f | while read -r file; do
-                    parent_dir=$(basename "$(dirname "$file")")
-                    mv "$file" "merged-coverage/${parent_dir}.json"
-                  done
-
-                  # Merge coverage using nyc
-                  npx nyc merge merged-coverage merged-coverage.json
-                  npx nyc report --reporter=html --reporter=text --reporter=lcov --temp-dir=merged-coverage
+              run: sh scripts/combine-coverage.sh
 
             # Upload final merged coverage report
             - name: Upload merged coverage

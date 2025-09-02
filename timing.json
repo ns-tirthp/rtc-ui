@@ -1,29 +1,29 @@
 {
-  "testResults": [
-    {
-      "name": "src/__tests__/currentFormattedDate.test.ts",
-      "startTime": 1756728172199,
-      "endTime": 1756728172249
-    },
-    {
-      "name": "src/__tests__/packDataWithSequenceNumber.test.ts",
-      "startTime": 1756728172255,
-      "endTime": 1756728172271
-    },
-    {
-      "name": "src/__tests__/extractSequenceNumber.test.ts",
-      "startTime": 1756728172277,
-      "endTime": 1756728172292
-    },
-    {
-      "name": "src/__tests__/convertBytes.test.ts",
-      "startTime": 1756728172295,
-      "endTime": 1756728172308
-    },
-    {
-      "name": "src/__tests__/findMissingSequenceNumber.test.ts",
-      "startTime": 1756728172311,
-      "endTime": 1756728172326
-    }
-  ]
+    "testResults": [
+        {
+            "name": "src/__tests__/currentFormattedDate.test.ts",
+            "startTime": 1756728172199,
+            "endTime": 1756728172249
+        },
+        {
+            "name": "src/__tests__/packDataWithSequenceNumber.test.ts",
+            "startTime": 1756728172255,
+            "endTime": 1756728172271
+        },
+        {
+            "name": "src/__tests__/extractSequenceNumber.test.ts",
+            "startTime": 1756728172277,
+            "endTime": 1756728172292
+        },
+        {
+            "name": "src/__tests__/convertBytes.test.ts",
+            "startTime": 1756728172295,
+            "endTime": 1756728172308
+        },
+        {
+            "name": "src/__tests__/findMissingSequenceNumber.test.ts",
+            "startTime": 1756728172311,
+            "endTime": 1756728172326
+        }
+    ]
 }

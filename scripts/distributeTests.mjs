@@ -17,7 +17,7 @@
  */
 import fs from "fs";
 import path from "path";
-import minimist from "minimist";
+import { parseArgs } from "util";
 
 /**
  * Parses command line arguments for test distribution.
@@ -25,16 +25,13 @@ import minimist from "minimist";
  * @throws {Error} If required arguments are missing or invalid.
  */
 function parseArguments() {
-    const args = minimist(process.argv.slice(2), {
-        alias: {
-            s: "shards",
-            i: "index",
-            f: "file",
+    const { values: args } = parseArgs({
+        options: {
+            shards: { type: "string", short: "s", default: "1" },
+            index: { type: "string", short: "i" },
+            file: { type: "string", short: "f", default: "timing.json" },
         },
-        default: {
-            shards: 1, // total number of shards, defaults to 1
-            file: "timing.json", // path to Jest JSON timings file
-        },
+        allowPositionals: true,
     });
 
     const totalShards = parseInt(args.shards, 10);

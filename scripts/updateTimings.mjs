@@ -12,30 +12,33 @@
 
 import fs from "fs";
 import path from "path";
-import minimist from "minimist";
+import { parseArgs } from "util";
 
 /**
  * Parses command line arguments for input, output, and deleted file paths.
  * @returns {object} An object containing 'newResultsFile', 'outputTimingsFile', and 'deletedFiles'.
  */
 function parseArguments() {
-    const args = minimist(process.argv.slice(2), {
-        alias: { n: "new", o: "out" },
-        default: {
-            new: "temp-test-results.json",
-            out: "timing.json",
-            _: [],
+    const { values, positionals } = parseArgs({
+        options: {
+            new: {
+                type: "string",
+                short: "n",
+                default: "temp-test-results.json",
+            },
+            out: { type: "string", short: "o", default: "timing.json" },
         },
+        allowPositionals: true, // capture extra args into `positionals`
     });
-    const deletedFiles = args._.map((p) => path.resolve(p));
+
+    const deletedFiles = positionals.map((p) => path.resolve(p));
 
     return {
-        newResultsFile: args.new,
-        outputTimingsFile: args.out,
+        newResultsFile: values.new,
+        outputTimingsFile: values.out,
         deletedFiles,
     };
 }
-
 /**
  * Reads and formats raw Jest timing data from a file.
  * @param {string} filePath - The path to the raw Jest JSON results file.
