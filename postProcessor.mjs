@@ -1,6 +1,6 @@
-const path = require("path");
+import path from "path";
 
-module.exports = (results) => {
+const proccessing = (results) => {
     results.testResults.forEach((testResult) => {
         testResult.testFilePath = path.relative(
             process.cwd(),
@@ -9,3 +9,5 @@ module.exports = (results) => {
     });
     return results;
 };
+
+export default proccessing;
