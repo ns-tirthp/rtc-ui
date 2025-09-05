@@ -1,5 +1,19 @@
+# CI Workflow: Tests & Coverage
+#
+# This workflow runs tests in parallel shards to improve performance and generates
+# a comprehensive coverage report by merging results from all test shards.
+#
+# Key Features:
+# - Configurable test sharding (1-15 shards) for optimal performance
+# - Parallel test execution across multiple runners
+# - Coverage report merging from all shards
+# - Artifact retention for debugging and review
+
 name: CI - Tests & Coverage
 
+# Workflow Triggers:
+# 1. Manual trigger (workflow_dispatch) - allows selecting number of test shards
+# 2. Pull request events - automatically runs with default 3 shards
 on:
     workflow_dispatch:
         inputs:
@@ -9,109 +23,167 @@ on:
                 default: "3"
                 type: choice
                 options:
-                    - "1"
-                    - "2"
-                    - "4"
-                    - "8"
-                    - "12"
-                    - "15"
+                    - "1" # Single shard - useful for debugging
+                    - "2" # Minimal parallelization
+                    - "4" # Light parallelization
+                    - "8" # Medium parallelization
+                    - "12" # Default - good balance of speed vs resource usage
+                    - "15" # Maximum parallelization
     pull_request:
+        # Automatically runs on all PR events (open, sync, etc.)
 
 jobs:
+    # =============================================================================
+    # JOB 1: PRE-PROCESSING
+    # Analyzes test files and creates a distribution matrix for parallel execution
+    # =============================================================================
     pre-processing:
         name: Generate Matrix & Prepare shards
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-latest # Custom runner - likely faster/optimized for this org
+
+        # Outputs the shard configuration for downstream jobs
         outputs:
             shards: ${{ steps.set-shard-files.outputs.shards }}
+
         steps:
-            # Checkout repository
+            # Step 1: Get the source code
             - name: Checkout code
               uses: actions/checkout@v3
+              # Downloads the repository content to the runner
 
-            # Setup Node.js and install dependencies
+            # Step 2: Setup Node.js environment
             - name: Setup Node.js & Install dependencies
               uses: actions/setup-node@v3
               with:
-                  node-version: 20
+                  node-version: 20 # Use Node.js LTS version
+                  # Note: Dependencies installed in next step via custom script
 
+            # Step 3: Distribute tests across shards intelligently
             - name: Generate shard test files
               id: set-shard-files
               env:
                   SHARD_COUNT: ${{ github.event.inputs.shards || '3' }}
               run: |
+                  # Run custom script that analyzes test files and distributes them
+                  # across shards for optimal load balancing (likely by file size/complexity)
                   FILES=$(node scripts/distributeTests.mjs --shards ${{ env.SHARD_COUNT }})
+
+                  # Output the shard configuration as JSON for the matrix strategy
                   echo "shards=$FILES" >> "$GITHUB_OUTPUT"
 
-    test-shards: # runs tests in parallel shards
+    # =============================================================================
+    # JOB 2: PARALLEL TEST EXECUTION
+    # Runs tests in parallel across multiple shards for faster execution
+    # =============================================================================
+    test-shards:
         name: Test Shards
-        runs-on: ubuntu-latest
-        needs: pre-processing
+        runs-on: ubuntu-latest # Standard GitHub runner for test execution
+        needs: pre-processing # Wait for shard distribution to complete
+
+        # Matrix strategy: creates parallel jobs for each shard
         strategy:
-            fail-fast: false
+            fail-fast: false # Continue running other shards even if one fails
             matrix:
+                # Dynamic matrix based on the shard configuration from pre-processing
                 shard: ${{ fromJSON(needs.pre-processing.outputs.shards) }}
+
         steps:
-            # Checkout repository
+            # Step 1: Get the source code (each shard needs its own copy)
             - name: Checkout code
               uses: actions/checkout@v3
 
-            # Setup Node.js and install dependencies
+            # Step 2: Setup Node.js with caching for faster dependency installation
             - name: Setup Node.js & Install dependencies
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-                  cache: "yarn"
-            - run: yarn install --frozen-lockfile
+                  cache: "yarn" # Cache yarn dependencies for faster subsequent runs
 
-            # Run tests using sharding
+            # Step 3: Install project dependencies
+            - run: yarn install --frozen-lockfile
+              # --frozen-lockfile ensures reproducible builds by using exact versions
+
+            # Step 4: Execute tests for this specific shard
             - name: Run tests
               env:
-                  NODE_OPTIONS: "--max_old_space_size=8192"
+                  # Increase Node.js memory limit for large test suites
+                  NODE_OPTIONS: "--max_old_space_size=8192" # 8GB memory limit
               run: |
+                  # Run tests only for files assigned to this shard
                   yarn test ${{ matrix.shard.files }} \
-                    --silent --verbose \
-                    --coverage \
-                    --coverageReporters=json \
-                    --passWithNoTests
+                    --silent --verbose \           # Minimal output but show test names
+                    --coverage \                   # Generate coverage data
+                    --coverageReporters=json \     # Output coverage in JSON format for merging
+                    --passWithNoTests              # Don't fail if shard has no tests
 
-              # Cache coverage artifact
+            - name: Generate summary
+              run: node script/summary.mjs
+
+            # Step 5: Upload coverage data from this shard
             - name: Coverage
               uses: actions/upload-artifact@v4
               with:
+                  # Unique name for each shard's coverage data
                   name: coverage-shard-${{ matrix.shard.index }}
-                  path: coverage/coverage-final.json
-                  retention-days: 1
+                  path: coverage/coverage-final.json # Upload entire coverage directory
+                  retention-days: 1 # Clean up after 1 day (temporary data)
 
-    merge-coverage: # merges coverage results from all shards
-        needs: test-shards
+    # =============================================================================
+    # JOB 3: COVERAGE REPORT MERGING
+    # Combines coverage data from all shards into a single comprehensive report
+    # =============================================================================
+    merge-coverage:
+        needs: test-shards # Wait for all test shards to complete
         name: Merge Coverage
-        runs-on: ubuntu-latest
-        steps:
-            # Checkout repository
-            - name: Checkout code
-              uses: actions/checkout@v4
+        runs-on: ubuntu-latest # Custom runner for merge processing
 
-            # Setup Node.js and install dependencies
-            - name: Setup Node.js & Install dependencies
+        steps:
+            # Step 1: Get the source code (needed for merge scripts and file context)
+            - name: Checkout code
+              uses: actions/checkout@v4 # Newer version of checkout action
+
+            # Step 2: Setup Node.js (coverage tools may need Node runtime)
+            - name: Setup Node.js
               uses: actions/setup-node@v3
               with:
                   node-version: 20
+                  # No cache needed - we're not installing dependencies here
 
-            # Download all coverage artifacts
+            # Step 3: Download all coverage artifacts from previous job
             - name: Download coverage artifacts
               uses: actions/download-artifact@v4
               with:
+                  # Downloads all artifacts to coverage-reports/ directory
+                  # Each shard's coverage will be in coverage-reports/coverage-shard-X/
                   path: coverage-reports/
 
-            # Merge coverage reports from all shards
+            # Step 4: Merge all shard coverage reports into single report
             - name: Merge coverage reports
               run: sh scripts/combine-coverage.sh
+              # Custom script that processes JSON coverage files and creates merged report
+              # Likely uses tools like nyc or istanbul to combine coverage data
 
-            # Upload final merged coverage report
+            # Step 5: Upload final merged coverage report
             - name: Upload merged coverage
               uses: actions/upload-artifact@v4
               with:
+                  # Unique name including commit SHA and run ID for traceability
                   name: merged-coverage-${{ github.sha }}-${{ github.run_id }}
                   path: |
-                      coverage/
-                      merged-coverage.json
+                      coverage/              # Final coverage report (HTML, JSON, etc.)
+                      merged-coverage.json   # Merged JSON data for further processing
+                  # No retention-days specified = uses default (usually 90 days)
+
+# =============================================================================
+# WORKFLOW SUMMARY:
+#
+# 1. PRE-PROCESSING: Analyzes test files and creates optimal shard distribution
+# 2. TEST-SHARDS: Runs tests in parallel (1-15 shards) with individual coverage
+# 3. MERGE-COVERAGE: Combines all coverage reports into final comprehensive report
+#
+# Benefits:
+# - Faster CI runs through parallelization
+# - Scalable shard count based on project size
+# - Complete coverage visibility across entire codebase
+# - Efficient resource usage with custom runners
+# =============================================================================
