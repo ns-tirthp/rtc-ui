@@ -115,7 +115,8 @@ jobs:
                     --coverage \
                     --coverageReporters=json \
                     --passWithNoTests \
-                    --outputFile=test-result.json
+                    --outputFile=test-result.json \
+                    --json
 
             # Step 5: Adding test summary
             - name: Generate summary
