@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const filePath = path.resolve("test-result.json");
+const filePath = path.resolve("./test-result.json");
 
 function writeSummary(output) {
     console.log(output); // still print to console
