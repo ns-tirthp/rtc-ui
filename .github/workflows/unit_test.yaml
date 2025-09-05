@@ -111,15 +111,17 @@ jobs:
               run: |
                   # Run tests only for files assigned to this shard
                   yarn test ${{ matrix.shard.files }} \
-                    --silent --verbose \           # Minimal output but show test names
-                    --coverage \                   # Generate coverage data
-                    --coverageReporters=json \     # Output coverage in JSON format for merging
-                    --passWithNoTests              # Don't fail if shard has no tests
+                    --silent --verbose \
+                    --coverage \     
+                    --coverageReporters=json \
+                    --passWithNoTests \
+                    --outputFile=test-result.json
 
+            # Step 5: Adding test summary
             - name: Generate summary
               run: node scripts/summary.mjs
 
-            # Step 5: Upload coverage data from this shard
+            # Step 6: Upload coverage data from this shard
             - name: Coverage
               uses: actions/upload-artifact@v4
               with:
