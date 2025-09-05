@@ -117,7 +117,7 @@ jobs:
                     --passWithNoTests              # Don't fail if shard has no tests
 
             - name: Generate summary
-              run: node script/summary.mjs
+              run: node scripts/summary.mjs
 
             # Step 5: Upload coverage data from this shard
             - name: Coverage
