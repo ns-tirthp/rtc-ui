@@ -112,7 +112,7 @@ jobs:
                   # Run tests only for files assigned to this shard
                   yarn test ${{ matrix.shard.files }} \
                     --silent --verbose \
-                    --coverage \     
+                    --coverage \
                     --coverageReporters=json \
                     --passWithNoTests \
                     --outputFile=test-result.json
