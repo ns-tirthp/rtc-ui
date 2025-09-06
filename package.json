@@ -12,7 +12,7 @@
         "start-server": "docker run -p 8080:8080 -d webrtc-node-server:latest",
         "test": "jest",
         "prepare": "husky",
-        "sync": "sh scripts/sync-test-time.sh"
+        "sync": "sh scripts/ci-test-utils.sh --sync-test-time"
     },
     "lint-staged": {
         "*.{js,jsx,ts,tsx}": [

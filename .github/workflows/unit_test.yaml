@@ -118,11 +118,7 @@ jobs:
                     --outputFile=test-result.json \
                     --json
 
-            # Step 5: Adding test summary
-            - name: Generate summary
-              run: node scripts/summary.mjs
-
-            # Step 6: Upload coverage data from this shard
+            # Step 5: Upload coverage data from this shard
             - name: Coverage
               uses: actions/upload-artifact@v4
               with:
@@ -162,7 +158,7 @@ jobs:
 
             # Step 4: Merge all shard coverage reports into single report
             - name: Merge coverage reports
-              run: sh scripts/combine-coverage.sh
+              run: sh scripts/ci-test-utils.sh --combine-coverage
               # Custom script that processes JSON coverage files and creates merged report
               # Likely uses tools like nyc or istanbul to combine coverage data
 
