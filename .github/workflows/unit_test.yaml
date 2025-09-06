@@ -111,13 +111,12 @@ jobs:
               run: |
                   # Run tests only for files assigned to this shard
                   yarn test ${{ matrix.shard.files }} \
-                    --silent --verbose \           # Minimal output but show test names
-                    --coverage \                   # Generate coverage data
-                    --coverageReporters=json \     # Output coverage in JSON format for merging
-                    --passWithNoTests              # Don't fail if shard has no tests
-
-            - name: Generate summary
-              run: node script/summary.mjs
+                    --silent --verbose \
+                    --coverage \
+                    --coverageReporters=json \
+                    --passWithNoTests \
+                    --outputFile=test-result.json \
+                    --json
 
             # Step 5: Upload coverage data from this shard
             - name: Coverage
@@ -159,7 +158,7 @@ jobs:
 
             # Step 4: Merge all shard coverage reports into single report
             - name: Merge coverage reports
-              run: sh scripts/combine-coverage.sh
+              run: sh scripts/ci-test-utils.sh --combine-coverage
               # Custom script that processes JSON coverage files and creates merged report
               # Likely uses tools like nyc or istanbul to combine coverage data
 
